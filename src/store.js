@@ -66,45 +66,49 @@ export const useStore = create(persist((set, get) => ({
     })),
 
     // Cloud Actions
+    versions: [], // List of versions for active note
+    isManualSaving: false,
+
     fetchNotes: async () => {
-        const { data, error } = await supabase
+        const { user } = get()
+        if (!user) return
+
+        const { data } = await supabase
             .from('notes')
-            .select('id, title, updated_at')
+            .select('*')
+            .eq('user_id', user.id)
             .order('updated_at', { ascending: false })
 
-        if (!error && data) {
-            set({ notes: data })
-        }
+        if (data) set({ notes: data })
     },
 
     createNote: async () => {
         const { user } = get()
         if (!user) return
 
-        const newNote = {
-            user_id: user.id,
-            title: 'Untitled Plan',
-            content: ''
-        }
-
         const { data, error } = await supabase
             .from('notes')
-            .insert(newNote)
+            .insert({
+                user_id: user.id,
+                title: 'Untitled Plan',
+                content: ''
+            })
             .select()
             .single()
 
         if (!error && data) {
-            set({
+            set(state => ({
                 activeNoteId: data.id,
-                noteContent: '',
-                noteTitle: 'Untitled Plan',
-                notes: [data, ...get().notes]
-            })
+                noteTitle: data.title,
+                noteContent: data.content,
+                notes: [data, ...state.notes],
+                versions: []
+            }))
         }
     },
 
     loadNote: async (id) => {
-        set({ isSaving: true }) // Reuse loading state visual or add specific loading state
+        set({ isSaving: true })
         const { data, error } = await supabase
             .from('notes')
             .select('*')
@@ -115,20 +119,24 @@ export const useStore = create(persist((set, get) => ({
             set({
                 activeNoteId: data.id,
                 noteContent: data.content || '',
-                noteTitle: data.title || 'Untitled Plan'
+                noteTitle: data.title,
+                isSaving: false
             })
+            get().fetchVersions(id)
+        } else {
+            set({ isSaving: false })
         }
-        set({ isSaving: false })
     },
 
-    saveNote: async () => {
+    saveNote: async (isManual = false) => {
         const { activeNoteId, noteContent, noteTitle, user } = get()
         if (!user) return
 
         set({ isSaving: true })
+        if (isManual) set({ isManualSaving: true })
 
         if (activeNoteId) {
-            // Update existing
+            // Update existing note (Draft)
             const { error } = await supabase
                 .from('notes')
                 .update({
@@ -139,7 +147,7 @@ export const useStore = create(persist((set, get) => ({
                 .eq('id', activeNoteId)
 
             if (!error) {
-                // Update list locally to reflect new timestamp/title
+                // Update list locally
                 set(state => ({
                     notes: state.notes.map(n =>
                         n.id === activeNoteId
@@ -147,10 +155,27 @@ export const useStore = create(persist((set, get) => ({
                             : n
                     ).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
                 }))
+
+                // If Manual Save, create a Version Snapshot
+                if (isManual) {
+                    const { error: versionError } = await supabase
+                        .from('note_versions')
+                        .insert({
+                            note_id: activeNoteId,
+                            title: noteTitle,
+                            content: noteContent
+                        })
+
+                    if (versionError) {
+                        console.error('Error creating version:', versionError)
+                    } else {
+                        // Refresh versions list
+                        get().fetchVersions(activeNoteId)
+                    }
+                }
             }
         } else {
-            // Create new (if user started typing without clicking 'New')
-            // This is "First Save" logic
+            // Create new (First Save)
             const { data, error } = await supabase
                 .from('notes')
                 .insert({
@@ -166,9 +191,47 @@ export const useStore = create(persist((set, get) => ({
                     activeNoteId: data.id,
                     notes: [data, ...state.notes]
                 }))
+                // If Manual Save on first create, also create version
+                if (isManual) {
+                    const { error: versionError } = await supabase
+                        .from('note_versions')
+                        .insert({
+                            note_id: data.id,
+                            title: noteTitle,
+                            content: noteContent
+                        })
+
+                    if (versionError) {
+                        console.error('Error creating version:', versionError)
+                    } else {
+                        get().fetchVersions(data.id)
+                    }
+                }
             }
         }
-        set({ isSaving: false })
+        set({ isSaving: false, isManualSaving: false })
+    },
+
+    fetchVersions: async (noteId) => {
+        const { data, error } = await supabase
+            .from('note_versions')
+            .select('*')
+            .eq('note_id', noteId)
+            .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error('Error fetching versions:', error)
+        }
+        if (data) set({ versions: data })
+    },
+
+    restoreVersion: async (version) => {
+        set({
+            noteTitle: version.title,
+            noteContent: version.content
+        })
+        // Immediately save as current draft
+        await get().saveNote(true)
     },
 
     // Translation State & Action

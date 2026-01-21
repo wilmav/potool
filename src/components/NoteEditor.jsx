@@ -1,7 +1,7 @@
 import { useStore } from '../store'
-import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Check, Plus } from 'lucide-react'
+import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Check, Plus, History, Clock, RotateCcw } from 'lucide-react'
 import { jsPDF } from 'jspdf'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 export function NoteEditor() {
     const {
@@ -9,11 +9,37 @@ export function NoteEditor() {
         noteTitle, setNoteTitle,
         language,
         translateNoteContent, isTranslating,
-        saveNote, isSaving, createNote
+        saveNote, isSaving, createNote,
+        versions, restoreVersion, activeNoteId,
+        isManualSaving
     } = useStore()
 
     const [showExportMenu, setShowExportMenu] = useState(false)
     const [showTranslateMenu, setShowTranslateMenu] = useState(false)
+    const [showHistory, setShowHistory] = useState(false)
+
+    const translateMenuRef = useRef(null)
+    const exportMenuRef = useRef(null)
+    const historyMenuRef = useRef(null)
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (translateMenuRef.current && !translateMenuRef.current.contains(event.target)) {
+                setShowTranslateMenu(false)
+            }
+            if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+                setShowExportMenu(false)
+            }
+            if (historyMenuRef.current && !historyMenuRef.current.contains(event.target)) {
+                setShowHistory(false)
+            }
+        }
+
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside)
+        }
+    }, [])
 
     // Debounced Auto-Save
     useEffect(() => {
@@ -93,7 +119,7 @@ export function NoteEditor() {
 
                 <div className="flex items-center gap-3">
                     {/* Translate Dropdown */}
-                    <div className="relative">
+                    <div className="relative" ref={translateMenuRef}>
                         <button
                             onClick={() => setShowTranslateMenu(!showTranslateMenu)}
                             disabled={isTranslating || !noteContent}
@@ -128,7 +154,7 @@ export function NoteEditor() {
                     </div>
 
                     {/* Export Dropdown */}
-                    <div className="relative">
+                    <div className="relative" ref={exportMenuRef}>
                         <button
                             onClick={() => setShowExportMenu(!showExportMenu)}
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-all border border-transparent hover:border-slate-700"
@@ -157,6 +183,59 @@ export function NoteEditor() {
                         )}
                     </div>
 
+                    {/* History Dropdown */}
+                    <div className="relative" ref={historyMenuRef}>
+                        <button
+                            onClick={() => setShowHistory(!showHistory)}
+                            disabled={!activeNoteId}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-400 hover:text-amber-300 hover:bg-slate-800 rounded-lg transition-all border border-transparent hover:border-slate-700 disabled:opacity-50"
+                            title={language === 'fi' ? 'Versiohistoria' : 'Version History'}
+                        >
+                            <History className="w-4 h-4" />
+                        </button>
+
+                        {showHistory && (
+                            <div className="absolute top-full right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                                <div className="p-3 border-b border-slate-700 bg-slate-900/50">
+                                    <h3 className="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                        <Clock className="w-3 h-3 text-amber-400" />
+                                        {language === 'fi' ? 'Versiohistoria' : 'Version History'}
+                                    </h3>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                                    {versions.length === 0 ? (
+                                        <div className="p-4 text-center text-xs text-slate-500">
+                                            {language === 'fi' ? 'Ei tallennettuja versioita.' : 'No saved versions yet.'}
+                                        </div>
+                                    ) : (
+                                        versions.map(version => (
+                                            <div key={version.id} className="p-3 border-b border-slate-800 hover:bg-slate-800/50 transition-colors group">
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <span className="text-xs font-medium text-slate-300">
+                                                        {new Date(version.created_at).toLocaleString(language === 'fi' ? 'fi-FI' : 'en-GB')}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (window.confirm(language === 'fi' ? 'Palautetaanko tämä versio? Nykyinen luonnos korvataan.' : 'Restore this version? Current draft will be replaced.')) {
+                                                                restoreVersion(version)
+                                                                setShowHistory(false)
+                                                            }
+                                                        }}
+                                                        className="text-[10px] bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500 hover:text-white px-2 py-1 rounded transition-all opacity-0 group-hover:opacity-100 flex items-center gap-1"
+                                                    >
+                                                        <RotateCcw className="w-3 h-3" />
+                                                        {language === 'fi' ? 'Palauta' : 'Restore'}
+                                                    </button>
+                                                </div>
+                                                <p className="text-xs text-slate-500 truncate">{version.title}</p>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
                     <div className="w-px h-6 bg-slate-800 mx-1"></div>
 
                     <button
@@ -168,11 +247,11 @@ export function NoteEditor() {
                     </button>
 
                     <button
-                        onClick={() => saveNote()}
+                        onClick={() => saveNote(true)}
                         disabled={isSaving}
                         className="flex items-center gap-2 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {isManualSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         Save
                     </button>
                 </div>
