@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../store'
-import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info } from 'lucide-react'
 
 export function Sidebar() {
     const { language, bullets, loadingBullets, toggleBulletActive, hideBullet, unhideBullet, addToNote } = useStore()
@@ -31,9 +31,6 @@ export function Sidebar() {
     // Filter logic: Search + Hidden check
     const filteredBullets = bullets.filter(b => {
         if (!searchTerm) {
-            // Keep hidden ones out unless we want to show them purely for counting logic easier
-            // but actually we want to render the visible ones only.
-            // We can calculate hidden ones separately.
             return !b.is_hidden
         }
         const term = searchTerm.toLowerCase()
@@ -46,8 +43,6 @@ export function Sidebar() {
     // Group visible bullets
     const groupedBullets = themes.reduce((acc, theme) => {
         const inTheme = filteredBullets.filter(b => b.theme === theme)
-        // Show theme even if empty but has hidden items? 
-        // Or show if it existed in original themes (yes, we iterate 'themes')
         acc[theme] = inTheme
         return acc
     }, {})
@@ -58,7 +53,7 @@ export function Sidebar() {
     }
 
     const restoreHiddenInTheme = (theme, e) => {
-        e.stopPropagation() // Prevent accordion toggle
+        e.stopPropagation()
         const hiddenInTheme = hiddenBullets.filter(b => b.theme === theme)
         hiddenInTheme.forEach(b => unhideBullet(b.id))
     }
@@ -88,7 +83,6 @@ export function Sidebar() {
                         const items = groupedBullets[theme] || []
                         const hiddenCount = getHiddenCount(theme)
 
-                        // Don't render if no items and no hidden items (unless it's a known category)
                         if (items.length === 0 && hiddenCount === 0) return null
 
                         return (
@@ -140,60 +134,81 @@ export function Sidebar() {
 
 function BulletCard({ bullet, language }) {
     const { toggleBulletActive, hideBullet, addToNote } = useStore()
+    const [showInfo, setShowInfo] = useState(false)
 
     const primaryText = language === 'fi' ? bullet.fi_text : bullet.en_text
     const secondaryText = language === 'fi' ? bullet.en_text : bullet.fi_text
+    const description = language === 'fi' ? bullet.fi_description : bullet.en_description
 
     return (
         <div className={`
-      group flex items-start justify-between p-2.5 rounded-lg border transition-all duration-200
+      flex flex-col rounded-lg border transition-all duration-200
       ${bullet.is_active
                 ? 'bg-indigo-900/20 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.1)]'
                 : 'bg-transparent border-transparent hover:bg-slate-700/30 hover:border-slate-600/30'}
     `}>
-            <div className="flex-1 mr-2 min-w-0">
-                <div className="flex flex-col">
-                    <span className={`font-medium text-sm truncate ${bullet.is_active ? 'text-indigo-300' : 'text-slate-300 group-hover:text-slate-200'}`}>
-                        {primaryText}
-                    </span>
-                    <span className="text-xs text-slate-500 truncate group-hover:text-slate-400 transition-colors">
-                        {secondaryText}
-                    </span>
+            <div className="group flex items-start justify-between p-2.5">
+                <div className="flex-1 mr-2 min-w-0 pointer-events-none">
+                    <div className="flex flex-col">
+                        <span className={`font-medium text-sm truncate ${bullet.is_active ? 'text-indigo-300' : 'text-slate-300 group-hover:text-slate-200'}`}>
+                            {primaryText}
+                        </span>
+                        <span className="text-xs text-slate-500 truncate group-hover:text-slate-400 transition-colors">
+                            {secondaryText}
+                        </span>
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 scale-95 group-hover:scale-100">
+                    <ActionBtn
+                        onClick={() => setShowInfo(!showInfo)}
+                        active={showInfo}
+                        icon={Info}
+                        label={language === 'fi' ? "Lisätietoa" : "Info"}
+                        extraClass="text-sky-400 hover:text-sky-300 hover:bg-sky-900/20 mr-1"
+                    />
+
+                    <ActionBtn
+                        onClick={() => toggleBulletActive(bullet.id)}
+                        active={bullet.is_active}
+                        icon={Check}
+                        label={language === 'fi' ? "Aktivoi" : "Activate"}
+                    />
+                    <ActionBtn
+                        onClick={() => addToNote(primaryText)}
+                        icon={Plus}
+                        label={language === 'fi' ? "Lisää" : "Add"}
+                    />
+                    <button
+                        onClick={() => hideBullet(bullet.id)}
+                        title={language === 'fi' ? "Piilota" : "Hide"}
+                        className="p-1.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-900/20 transition-colors"
+                    >
+                        <EyeOff className="w-3.5 h-3.5" />
+                    </button>
                 </div>
             </div>
 
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 scale-95 group-hover:scale-100">
-                <ActionBtn
-                    onClick={() => toggleBulletActive(bullet.id)}
-                    active={bullet.is_active}
-                    icon={Check}
-                    label={language === 'fi' ? "Aktivoi" : "Activate"}
-                />
-                <ActionBtn
-                    onClick={() => addToNote(primaryText)}
-                    icon={Plus}
-                    label={language === 'fi' ? "Lisää" : "Add"}
-                />
-                <button
-                    onClick={() => hideBullet(bullet.id)}
-                    title={language === 'fi' ? "Piilota" : "Hide"}
-                    className="p-1.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-900/20 transition-colors"
-                >
-                    <EyeOff className="w-3.5 h-3.5" />
-                </button>
-            </div>
+            {/* Tooltip / Description Area */}
+            {showInfo && (
+                <div className="px-3 pb-3 pt-0">
+                    <div className="p-3 bg-slate-800/80 rounded-lg border border-slate-700/50 text-xs text-slate-300 leading-relaxed shadow-inner">
+                        <p>{description || (language === 'fi' ? "Ei kuvausta saatavilla." : "No description available.")}</p>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
-function ActionBtn({ onClick, active, icon: Icon, label }) {
+function ActionBtn({ onClick, active, icon: Icon, label, extraClass = '' }) {
     return (
         <button
             onClick={onClick}
             title={label}
-            className={`p-1.5 rounded-md transition-all ${active
-                ? 'text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30'
-                : 'text-slate-400 hover:text-indigo-300 hover:bg-slate-600/50'
+            className={`p-1.5 rounded-md transition-all ${extraClass} ${active && !extraClass
+                    ? 'text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30'
+                    : !extraClass ? 'text-slate-400 hover:text-indigo-300 hover:bg-slate-600/50' : ''
                 }`}
         >
             <Icon className="w-3.5 h-3.5" />
