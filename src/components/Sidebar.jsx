@@ -1,11 +1,22 @@
 import { useState } from 'react'
 import { useStore } from '../store'
-import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Star } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye } from 'lucide-react'
 
 export function Sidebar() {
-    const { language, bullets, loadingBullets, toggleBulletActive, hideBullet, addToNote } = useStore()
+    const { language, bullets, loadingBullets, toggleBulletActive, hideBullet, unhideBullet, addToNote } = useStore()
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedThemes, setExpandedThemes] = useState(new Set(['Discovery', 'Riskit', 'Ideointi', 'Määrittely']))
+
+    // Theme translation map
+    const THEME_LABELS = {
+        'Discovery': { fi: 'Discovery', en: 'Discovery' },
+        'Ideointi': { fi: 'Ideointi', en: 'Ideation' },
+        'Määrittely': { fi: 'Vaatimusmäärittely', en: 'Requirements' },
+        'Go-to-market': { fi: 'Go-to-market & Julkaisu', en: 'Go-to-market & Release' },
+        'Kommunikaatio': { fi: 'Kommunikaatio & Yhteistyö', en: 'Communication & Collab' },
+        'Työkalut': { fi: 'Työkalut & Teknologiat', en: 'Tools & Tech' },
+        'Riskit': { fi: 'Riskit', en: 'Risks' }
+    }
 
     // Group bullets by theme
     const themes = [...new Set(bullets.map(b => b.theme))]
@@ -19,18 +30,38 @@ export function Sidebar() {
 
     // Filter logic: Search + Hidden check
     const filteredBullets = bullets.filter(b => {
-        if (b.is_hidden) return false
-        if (!searchTerm) return true
+        if (!searchTerm) {
+            // Keep hidden ones out unless we want to show them purely for counting logic easier
+            // but actually we want to render the visible ones only.
+            // We can calculate hidden ones separately.
+            return !b.is_hidden
+        }
         const term = searchTerm.toLowerCase()
-        return b.fi_text.toLowerCase().includes(term) || b.en_text.toLowerCase().includes(term)
+        const matchesSearch = b.fi_text.toLowerCase().includes(term) || b.en_text.toLowerCase().includes(term)
+        return !b.is_hidden && matchesSearch
     })
 
-    // Group filtered bullets
+    const hiddenBullets = bullets.filter(b => b.is_hidden)
+
+    // Group visible bullets
     const groupedBullets = themes.reduce((acc, theme) => {
         const inTheme = filteredBullets.filter(b => b.theme === theme)
-        if (inTheme.length > 0) acc[theme] = inTheme
+        // Show theme even if empty but has hidden items? 
+        // Or show if it existed in original themes (yes, we iterate 'themes')
+        acc[theme] = inTheme
         return acc
     }, {})
+
+    // Count hidden per theme
+    const getHiddenCount = (theme) => {
+        return hiddenBullets.filter(b => b.theme === theme).length
+    }
+
+    const restoreHiddenInTheme = (theme, e) => {
+        e.stopPropagation() // Prevent accordion toggle
+        const hiddenInTheme = hiddenBullets.filter(b => b.theme === theme)
+        hiddenInTheme.forEach(b => unhideBullet(b.id))
+    }
 
     return (
         <div className="p-4 space-y-6 h-full flex flex-col">
@@ -53,29 +84,54 @@ export function Sidebar() {
                         <span className="text-sm animate-pulse">Loading library...</span>
                     </div>
                 ) : (
-                    Object.entries(groupedBullets).map(([theme, items]) => (
-                        <div key={theme} className="bg-slate-800/30 rounded-xl border border-slate-700/30 overflow-hidden backdrop-blur-sm">
-                            <button
-                                onClick={() => toggleTheme(theme)}
-                                className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-300 hover:text-indigo-400 hover:bg-slate-800/50 transition-all"
-                            >
-                                <span>{theme}</span>
-                                {expandedThemes.has(theme) ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                            </button>
+                    themes.map((theme) => {
+                        const items = groupedBullets[theme] || []
+                        const hiddenCount = getHiddenCount(theme)
 
-                            {expandedThemes.has(theme) && (
-                                <div className="px-2 pb-2 space-y-1">
-                                    {items.sort((a, b) => {
-                                        const textA = language === 'fi' ? a.fi_text : a.en_text
-                                        const textB = language === 'fi' ? b.fi_text : b.en_text
-                                        return textA.localeCompare(textB)
-                                    }).map(bullet => (
-                                        <BulletCard key={bullet.id} bullet={bullet} language={language} />
-                                    ))}
+                        // Don't render if no items and no hidden items (unless it's a known category)
+                        if (items.length === 0 && hiddenCount === 0) return null
+
+                        return (
+                            <div key={theme} className="bg-slate-800/30 rounded-xl border border-slate-700/30 overflow-hidden backdrop-blur-sm">
+                                <div className="flex items-center justify-between pr-4 hover:bg-slate-800/50 transition-all">
+                                    <button
+                                        onClick={() => toggleTheme(theme)}
+                                        className="flex-1 flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-300 text-left"
+                                    >
+                                        <span className="uppercase tracking-wide text-xs">
+                                            {THEME_LABELS[theme]
+                                                ? THEME_LABELS[theme][language]
+                                                : theme}
+                                        </span>
+                                        {expandedThemes.has(theme) ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                                    </button>
+
+                                    {hiddenCount > 0 && (
+                                        <button
+                                            onClick={(e) => restoreHiddenInTheme(theme, e)}
+                                            title={language === 'fi' ? `Palauta ${hiddenCount} piilotettua` : `Restore ${hiddenCount} hidden`}
+                                            className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-slate-500 hover:text-emerald-400 bg-slate-800/50 hover:bg-emerald-950/30 border border-slate-700 hover:border-emerald-500/30 rounded-md transition-all ml-2"
+                                        >
+                                            <Eye className="w-3 h-3" />
+                                            <span>{hiddenCount}</span>
+                                        </button>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                    ))
+
+                                {expandedThemes.has(theme) && (
+                                    <div className="px-2 pb-2 space-y-1">
+                                        {items.sort((a, b) => {
+                                            const textA = language === 'fi' ? a.fi_text : a.en_text
+                                            const textB = language === 'fi' ? b.fi_text : b.en_text
+                                            return textA.localeCompare(textB)
+                                        }).map(bullet => (
+                                            <BulletCard key={bullet.id} bullet={bullet} language={language} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })
                 )}
             </div>
         </div>
@@ -136,8 +192,8 @@ function ActionBtn({ onClick, active, icon: Icon, label }) {
             onClick={onClick}
             title={label}
             className={`p-1.5 rounded-md transition-all ${active
-                    ? 'text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30'
-                    : 'text-slate-400 hover:text-indigo-300 hover:bg-slate-600/50'
+                ? 'text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30'
+                : 'text-slate-400 hover:text-indigo-300 hover:bg-slate-600/50'
                 }`}
         >
             <Icon className="w-3.5 h-3.5" />

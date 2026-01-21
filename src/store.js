@@ -44,6 +44,12 @@ export const useStore = create((set, get) => ({
         ),
     })),
 
+    unhideBullet: (id) => set((state) => ({
+        bullets: state.bullets.map((b) =>
+            b.id === id ? { ...b, is_hidden: false } : b
+        ),
+    })),
+
     // Note State
     noteContent: '',
     setNoteContent: (content) => set({ noteContent: content }),
