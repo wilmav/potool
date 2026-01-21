@@ -1,11 +1,22 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../store'
-import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen } from 'lucide-react'
 
 export function Sidebar() {
-    const { language, bullets, loadingBullets, toggleBulletActive, hideBullet, unhideBullet, addToNote } = useStore()
+    const {
+        language, bullets, loadingBullets,
+        toggleBulletActive, hideBullet, unhideBullet, addToNote,
+        notes, fetchNotes, loadNote, createNote, activeNoteId
+    } = useStore()
+
+    const [view, setView] = useState('library') // 'library' | 'plans'
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedThemes, setExpandedThemes] = useState(new Set(['Discovery', 'Riskit', 'Ideointi', 'Määrittely']))
+
+    // Load notes on mount
+    useEffect(() => {
+        fetchNotes()
+    }, [])
 
     // Theme translation map
     const THEME_LABELS = {
@@ -28,11 +39,9 @@ export function Sidebar() {
         setExpandedThemes(next)
     }
 
-    // Filter logic: Search + Hidden check
+    // Filter logic: Search + Hidden check for Library
     const filteredBullets = bullets.filter(b => {
-        if (!searchTerm) {
-            return !b.is_hidden
-        }
+        if (!searchTerm) return !b.is_hidden
         const term = searchTerm.toLowerCase()
         const matchesSearch = b.fi_text.toLowerCase().includes(term) || b.en_text.toLowerCase().includes(term)
         return !b.is_hidden && matchesSearch
@@ -40,17 +49,13 @@ export function Sidebar() {
 
     const hiddenBullets = bullets.filter(b => b.is_hidden)
 
-    // Group visible bullets
     const groupedBullets = themes.reduce((acc, theme) => {
         const inTheme = filteredBullets.filter(b => b.theme === theme)
         acc[theme] = inTheme
         return acc
     }, {})
 
-    // Count hidden per theme
-    const getHiddenCount = (theme) => {
-        return hiddenBullets.filter(b => b.theme === theme).length
-    }
+    const getHiddenCount = (theme) => hiddenBullets.filter(b => b.theme === theme).length
 
     const restoreHiddenInTheme = (theme, e) => {
         e.stopPropagation()
@@ -59,73 +64,156 @@ export function Sidebar() {
     }
 
     return (
-        <div className="p-4 space-y-6 h-full flex flex-col">
-            {/* Search */}
-            <div className="relative shrink-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                    type="text"
-                    placeholder={language === 'fi' ? "Hae avainsanoja..." : "Search keywords..."}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 focus:outline-none text-sm text-slate-200 placeholder-slate-500 transition-all shadow-sm"
-                />
+        <div className="flex flex-col h-full">
+            {/* View Switcher */}
+            <div className="p-4 pb-0 grid grid-cols-2 gap-2">
+                <button
+                    onClick={() => setView('library')}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === 'library'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                        }`}
+                >
+                    <Layout className="w-4 h-4" />
+                    {language === 'fi' ? 'Kirjasto' : 'Library'}
+                </button>
+                <button
+                    onClick={() => setView('plans')}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === 'plans'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                        }`}
+                >
+                    <FolderOpen className="w-4 h-4" />
+                    {language === 'fi' ? 'Suunnitelmat' : 'My Plans'}
+                </button>
             </div>
 
-            {/* Accordions */}
-            <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                {loadingBullets ? (
-                    <div className="flex justify-center py-8 text-slate-500">
-                        <span className="text-sm animate-pulse">Loading library...</span>
-                    </div>
-                ) : (
-                    themes.map((theme) => {
-                        const items = groupedBullets[theme] || []
-                        const hiddenCount = getHiddenCount(theme)
+            <div className="p-4 space-y-6 flex-1 flex flex-col min-h-0">
 
-                        if (items.length === 0 && hiddenCount === 0) return null
+                {view === 'library' && (
+                    <>
+                        {/* Search */}
+                        <div className="relative shrink-0">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder={language === 'fi' ? "Hae avainsanoja..." : "Search keywords..."}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 focus:outline-none text-sm text-slate-200 placeholder-slate-500 transition-all shadow-sm"
+                            />
+                        </div>
 
-                        return (
-                            <div key={theme} className="bg-slate-800/30 rounded-xl border border-slate-700/30 overflow-hidden backdrop-blur-sm">
-                                <div className="flex items-center justify-between pr-4 hover:bg-slate-800/50 transition-all">
-                                    <button
-                                        onClick={() => toggleTheme(theme)}
-                                        className="flex-1 flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-300 text-left"
-                                    >
-                                        <span className="uppercase tracking-wide text-xs">
-                                            {THEME_LABELS[theme]
-                                                ? THEME_LABELS[theme][language]
-                                                : theme}
-                                        </span>
-                                        {expandedThemes.has(theme) ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
-                                    </button>
-
-                                    {hiddenCount > 0 && (
-                                        <button
-                                            onClick={(e) => restoreHiddenInTheme(theme, e)}
-                                            title={language === 'fi' ? `Palauta ${hiddenCount} piilotettua` : `Restore ${hiddenCount} hidden`}
-                                            className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-slate-500 hover:text-emerald-400 bg-slate-800/50 hover:bg-emerald-950/30 border border-slate-700 hover:border-emerald-500/30 rounded-md transition-all ml-2"
-                                        >
-                                            <Eye className="w-3 h-3" />
-                                            <span>{hiddenCount}</span>
-                                        </button>
-                                    )}
+                        {/* Accordions */}
+                        <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                            {loadingBullets ? (
+                                <div className="flex justify-center py-8 text-slate-500">
+                                    <span className="text-sm animate-pulse">Loading library...</span>
                                 </div>
+                            ) : (
+                                themes.map((theme) => {
+                                    const items = groupedBullets[theme] || []
+                                    const hiddenCount = getHiddenCount(theme)
 
-                                {expandedThemes.has(theme) && (
-                                    <div className="px-2 pb-2 space-y-1">
-                                        {items.sort((a, b) => {
-                                            const textA = language === 'fi' ? a.fi_text : a.en_text
-                                            const textB = language === 'fi' ? b.fi_text : b.en_text
-                                            return textA.localeCompare(textB)
-                                        }).map(bullet => (
-                                            <BulletCard key={bullet.id} bullet={bullet} language={language} />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })
+                                    if (items.length === 0 && hiddenCount === 0) return null
+
+                                    return (
+                                        <div key={theme} className="bg-slate-800/30 rounded-xl border border-slate-700/30 overflow-hidden backdrop-blur-sm">
+                                            <div className="flex items-center justify-between pr-4 hover:bg-slate-800/50 transition-all">
+                                                <button
+                                                    onClick={() => toggleTheme(theme)}
+                                                    className="flex-1 flex items-center justify-between px-4 py-3 text-sm font-semibold text-slate-300 text-left"
+                                                >
+                                                    <span className="uppercase tracking-wide text-xs">
+                                                        {THEME_LABELS[theme]
+                                                            ? THEME_LABELS[theme][language]
+                                                            : theme}
+                                                    </span>
+                                                    {expandedThemes.has(theme) ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                                                </button>
+
+                                                {hiddenCount > 0 && (
+                                                    <button
+                                                        onClick={(e) => restoreHiddenInTheme(theme, e)}
+                                                        title={language === 'fi' ? `Palauta ${hiddenCount} piilotettua` : `Restore ${hiddenCount} hidden`}
+                                                        className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-slate-500 hover:text-emerald-400 bg-slate-800/50 hover:bg-emerald-950/30 border border-slate-700 hover:border-emerald-500/30 rounded-md transition-all ml-2"
+                                                    >
+                                                        <Eye className="w-3 h-3" />
+                                                        <span>{hiddenCount}</span>
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            {expandedThemes.has(theme) && (
+                                                <div className="px-2 pb-2 space-y-1">
+                                                    {items.sort((a, b) => {
+                                                        const textA = language === 'fi' ? a.fi_text : a.en_text
+                                                        const textB = language === 'fi' ? b.fi_text : b.en_text
+                                                        return textA.localeCompare(textB)
+                                                    }).map(bullet => (
+                                                        <BulletCard key={bullet.id} bullet={bullet} language={language} />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })
+                            )}
+                        </div>
+                    </>
+                )}
+
+                {view === 'plans' && (
+                    <div className="flex flex-col h-full">
+                        <button
+                            onClick={createNote}
+                            className="w-full flex items-center justify-center gap-2 py-3 mb-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98]"
+                        >
+                            <Plus className="w-5 h-5" />
+                            {language === 'fi' ? 'Uusi suunnitelma' : 'New Plan'}
+                        </button>
+
+                        <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                            {notes.length === 0 ? (
+                                <div className="text-center py-10 text-slate-500 text-sm">
+                                    {language === 'fi' ? 'Ei tallennettuja suunnitelmia.' : 'No saved plans yet.'}
+                                </div>
+                            ) : (
+                                notes.map(note => (
+                                    <button
+                                        key={note.id}
+                                        onClick={() => loadNote(note.id)}
+                                        className={`w-full p-4 rounded-xl border text-left transition-all group ${activeNoteId === note.id
+                                                ? 'bg-indigo-900/20 border-indigo-500/50 shadow-md ring-1 ring-indigo-500/30'
+                                                : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800 hover:border-slate-600'
+                                            }`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`p-2 rounded-lg ${activeNoteId === note.id ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
+                                                    <FileText className="w-5 h-5" />
+                                                </div>
+                                                <div>
+                                                    <h3 className={`font-semibold text-sm ${activeNoteId === note.id ? 'text-indigo-100' : 'text-slate-200 group-hover:text-white'}`}>
+                                                        {note.title || (language === 'fi' ? 'Nimetön' : 'Untitled')}
+                                                    </h3>
+                                                    <span className="text-xs text-slate-500">
+                                                        {new Date(note.updated_at).toLocaleDateString()} {new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {activeNoteId === note.id && (
+                                                <div className="text-indigo-400 bg-indigo-500/10 p-1.5 rounded-full">
+                                                    <Check className="w-3 h-3" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </button>
+                                ))
+                            )}
+                        </div>
+                    </div>
                 )}
             </div>
         </div>
@@ -207,8 +295,8 @@ function ActionBtn({ onClick, active, icon: Icon, label, extraClass = '' }) {
             onClick={onClick}
             title={label}
             className={`p-1.5 rounded-md transition-all ${extraClass} ${active && !extraClass
-                    ? 'text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30'
-                    : !extraClass ? 'text-slate-400 hover:text-indigo-300 hover:bg-slate-600/50' : ''
+                ? 'text-indigo-300 bg-indigo-500/20 hover:bg-indigo-500/30'
+                : !extraClass ? 'text-slate-400 hover:text-indigo-300 hover:bg-slate-600/50' : ''
                 }`}
         >
             <Icon className="w-3.5 h-3.5" />
