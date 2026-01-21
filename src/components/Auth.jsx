@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Layout } from 'lucide-react'
 
 export function Auth() {
     const [loading, setLoading] = useState(false)
@@ -22,30 +22,34 @@ export function Auth() {
         if (error) {
             setMessage('Error: ' + error.message)
         } else {
-            setMessage('Tarkista sähköpostisi! Lähetimme sinulle kirjautumislinkin. (Check your email for the login link!)')
+            setMessage('Tarkista sähköpostisi! Lähetimme sinulle kirjautumislinkin. (Check your email!)')
         }
         setLoading(false)
     }
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
-            <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 border border-gray-100">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">Tervetuloa PO Tooliin</h1>
-                <p className="text-gray-500 mb-8 text-center text-sm">
-                    Kirjaudu sisään sähköpostilla (Magic Link)
-                    <br />
-                    <span className="text-xs text-gray-400">Sign in via Magic Link</span>
-                </p>
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-4 text-slate-200">
+            <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-800 p-8 sm:p-10">
 
-                <form onSubmit={handleLogin} className="space-y-4">
+                <div className="flex flex-col items-center mb-10">
+                    <div className="p-3 bg-indigo-500/10 rounded-xl mb-4">
+                        <Layout className="w-10 h-10 text-indigo-400" />
+                    </div>
+                    <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+                        PO Tool
+                    </h1>
+                    <p className="text-slate-500 mt-2 font-medium">Bilingual Specification & Planning</p>
+                </div>
+
+                <form onSubmit={handleLogin} className="space-y-6">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 ml-1">Email Address</label>
                         <input
                             type="email"
-                            placeholder="your@email.com"
+                            placeholder="name@company.com"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                            className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 focus:outline-none text-slate-200 placeholder-slate-600 transition-all font-medium"
                             required
                         />
                     </div>
@@ -53,14 +57,14 @@ export function Auth() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-2 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/20 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Lähetä linkki / Send Link'}
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Magic Link'}
                     </button>
                 </form>
 
                 {message && (
-                    <div className={`mt-4 p-3 rounded-lg text-sm text-center ${message.startsWith('Error') ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
+                    <div className={`mt-6 p-4 rounded-xl text-sm font-medium text-center ${message.startsWith('Error') ? 'bg-rose-950/30 text-rose-400 border border-rose-900/50' : 'bg-emerald-950/30 text-emerald-400 border border-emerald-900/50'}`}>
                         {message}
                     </div>
                 )}
