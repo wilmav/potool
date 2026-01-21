@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { supabase } from '../supabase'
 import { Loader2, Layout } from 'lucide-react'
 
-export function Auth() {
+export function Auth({ onBack }) {
     const [loading, setLoading] = useState(false)
     const [email, setEmail] = useState('')
     const [message, setMessage] = useState('')
@@ -29,9 +29,15 @@ export function Auth() {
 
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-4 text-slate-200">
-            <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-800 p-8 sm:p-10">
+            <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-800 p-8 sm:p-10 relative">
+                <button
+                    onClick={onBack}
+                    className="absolute top-4 left-4 text-slate-500 hover:text-slate-300 transition-colors text-sm font-medium"
+                >
+                    ← Back
+                </button>
 
-                <div className="flex flex-col items-center mb-10">
+                <div className="flex flex-col items-center mb-10 mt-4">
                     <div className="p-3 bg-indigo-500/10 rounded-xl mb-4">
                         <Layout className="w-10 h-10 text-indigo-400" />
                     </div>

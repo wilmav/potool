@@ -1,13 +1,14 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import { supabase } from './supabase'
 import { Sidebar } from './components/Sidebar'
 import { NoteEditor } from './components/NoteEditor'
 import { Auth } from './components/Auth'
+import { LandingPage } from './components/LandingPage'
 import { Layout, Globe, LogOut, Sparkles } from 'lucide-react'
 
 function App() {
-    const { language, setLanguage, user, setUser, fetchBullets } = useStore()
+    const { language, setLanguage, user, setUser, fetchBullets, activeNoteId, saveNote } = useStore() // Added activeNoteId, saveNote
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -23,17 +24,79 @@ function App() {
         return () => subscription.unsubscribe()
     }, [])
 
-    const handleLogout = async () => {
-        await supabase.auth.signOut()
-        setUser(null)
+    const handleLogout = () => {
+        if (activeNoteId) {
+            setShowLogoutConfirm(true)
+        } else {
+            // No active note, just logout
+            performLogout(false)
+        }
     }
 
+    const [view, setView] = useState('landing') // 'landing' | 'login'
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
     if (!user) {
-        return <Auth />
+        if (view === 'login') {
+            return <Auth onBack={() => setView('landing')} />
+        }
+        return <LandingPage onLogin={() => setView('login')} />
+    }
+
+    const performLogout = async (shouldSave = false) => {
+        if (shouldSave && activeNoteId) {
+            await saveNote(true)
+        }
+        await supabase.auth.signOut()
+        setUser(null)
+        setView('landing')
+        setShowLogoutConfirm(false)
     }
 
     return (
-        <div className="flex h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30">
+        <div className="flex h-screen bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30 relative">
+            {/* Logout Confirmation Modal */}
+            {showLogoutConfirm && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+                        <div className="p-6">
+                            <h3 className="text-xl font-bold text-slate-100 mb-2">
+                                {language === 'fi' ? 'Kirjaudutaanko ulos?' : 'Log out?'}
+                            </h3>
+                            <p className="text-slate-400 mb-6 leading-relaxed">
+                                {language === 'fi'
+                                    ? 'Haluatko tallentaa nykyisen tilanteen uudeksi versioksi historiaan ennen poistumista?'
+                                    : 'Do you want to create a new version snapshot in history before logging out?'}
+                            </p>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={() => performLogout(true)}
+                                    className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                    {language === 'fi' ? 'Tallenna versio ja kirjaudu ulos' : 'Save Version & Log Out'}
+                                </button>
+
+                                <button
+                                    onClick={() => performLogout(false)}
+                                    className="w-full py-3 px-4 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium rounded-xl transition-all active:scale-[0.98]"
+                                >
+                                    {language === 'fi' ? 'Kirjaudu ulos (vain luonnos)' : 'Log Out (Draft only)'}
+                                </button>
+
+                                <button
+                                    onClick={() => setShowLogoutConfirm(false)}
+                                    className="w-full py-2 px-4 text-slate-500 hover:text-slate-300 font-medium transition-colors mt-2"
+                                >
+                                    {language === 'fi' ? 'Peruuta' : 'Cancel'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Sidebar with Bullet Library - Darker Panel */}
             <aside className="w-[400px] min-w-[350px] border-r border-slate-800 bg-slate-900/50 backdrop-blur-xl flex flex-col shadow-2xl relative z-20">
                 {/* Header */}
@@ -53,7 +116,7 @@ function App() {
                         <button
                             onClick={handleLogout}
                             className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-all"
-                            title="Log out"
+                            title={language === 'fi' ? 'Kirjaudu ulos' : 'Log out'}
                         >
                             <LogOut className="w-4 h-4" />
                         </button>
