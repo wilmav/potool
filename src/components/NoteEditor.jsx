@@ -286,40 +286,11 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1.5 ">
+                <div className="flex items-center gap-1">
 
-                    {/* Formatting Toolbar (Always visible if editor exists, or maybe just Visual Mode? User said "first") */}
-                    {/* Based on user request order: TextSize, Color... */}
+                    {/* Group 1: Structure (Heading, Lists, Indentation) */}
                     {!isSourceMode && editor && (
-                        <>
-                            {/* Lists Dropdown */}
-                            <div className="relative" ref={listMenuRef}>
-                                <button
-                                    onClick={() => setShowListMenu(!showListMenu)}
-                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
-                                    title={language === 'fi' ? "Listat" : "Lists"}
-                                >
-                                    <List className="w-5 h-5" />
-                                    <ChevronDown className="w-3 h-3" />
-                                </button>
-                                {showListMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col p-1">
-                                        <button
-                                            onClick={() => { editor.chain().focus().toggleBulletList().run(); setShowListMenu(false) }}
-                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('bulletList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
-                                        >
-                                            <List className="w-4 h-4" /> {language === 'fi' ? 'Luettelomerkit' : 'Bullet List'}
-                                        </button>
-                                        <button
-                                            onClick={() => { editor.chain().focus().toggleOrderedList().run(); setShowListMenu(false) }}
-                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('orderedList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
-                                        >
-                                            <ListOrdered className="w-4 h-4" /> {language === 'fi' ? 'Numeroitu lista' : 'Ordered List'}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
+                        <div className="flex items-center gap-1">
                             {/* Header Dropdown */}
                             <div className="relative" ref={headerMenuRef}>
                                 <button
@@ -331,7 +302,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                     <ChevronDown className="w-3 h-3" />
                                 </button>
                                 {showHeaderMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-40 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col p-1">
+                                    <div className="absolute top-full left-0 mt-2 w-40 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] flex flex-col p-1">
                                         <button onClick={() => { editor.chain().focus().setParagraph().run(); setShowHeaderMenu(false) }} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
                                             <Pilcrow className="w-4 h-4" /> {language === 'fi' ? 'Perusteksti' : 'Normal Text'}
                                         </button>
@@ -348,7 +319,59 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                 )}
                             </div>
 
-                            {/* Color Picker Dropdown */}
+                            {/* Lists Dropdown */}
+                            <div className="relative" ref={listMenuRef}>
+                                <button
+                                    onClick={() => setShowListMenu(!showListMenu)}
+                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                    title={language === 'fi' ? "Listat" : "Lists"}
+                                >
+                                    <List className="w-5 h-5" />
+                                    <ChevronDown className="w-3 h-3" />
+                                </button>
+                                {showListMenu && (
+                                    <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] flex flex-col p-1">
+                                        <button
+                                            onClick={() => { editor.chain().focus().toggleBulletList().run(); setShowListMenu(false) }}
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('bulletList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
+                                        >
+                                            <List className="w-4 h-4" /> {language === 'fi' ? 'Luettelomerkit' : 'Bullet List'}
+                                        </button>
+                                        <button
+                                            onClick={() => { editor.chain().focus().toggleOrderedList().run(); setShowListMenu(false) }}
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('orderedList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
+                                        >
+                                            <ListOrdered className="w-4 h-4" /> {language === 'fi' ? 'Numeroitu lista' : 'Ordered List'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Indent / Outdent */}
+                            <button
+                                onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+                                disabled={!editor.can().liftListItem('listItem')}
+                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-30"
+                                title={language === 'fi' ? "Vähennä sisennystä" : "Decrease Indent"}
+                            >
+                                <Outdent className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+                                disabled={!editor.can().sinkListItem('listItem')}
+                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-30"
+                                title={language === 'fi' ? "Lisää sisennystä" : "Increase Indent"}
+                            >
+                                <Indent className="w-5 h-5" />
+                            </button>
+                        </div>
+                    )}
+
+                    {!isSourceMode && editor && <div className="w-px h-6 bg-slate-800 mx-2"></div>}
+
+                    {/* Group 2: Formatting (Color) */}
+                    {!isSourceMode && editor && (
+                        <>
                             <div className="relative" ref={colorMenuRef}>
                                 <button
                                     onClick={() => setShowColorMenu(!showColorMenu)}
@@ -359,11 +382,10 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                     <ChevronDown className="w-3 h-3" />
                                 </button>
                                 {showColorMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 p-3">
-
-                                        {/* 1. Custom Picker Section (Top) */}
+                                    <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] p-3">
+                                        {/* Custom Picker Section */}
                                         <div className="mb-4">
-                                            <div className="text-xs font-semibold text-slate-500 mb-2 uppercase">{language === 'fi' ? 'Valitse uusi' : 'Pick New Reference'}</div>
+                                            <div className="text-xs font-semibold text-slate-500 mb-2 uppercase">{language === 'fi' ? 'Valitse uusi' : 'Pick New'}</div>
                                             <label className="flex items-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700/80 transition-colors w-full cursor-pointer relative group">
                                                 <div className="relative shrink-0 w-8 h-8">
                                                     <input
@@ -372,7 +394,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                                         onChange={(e) => {
                                                             const c = e.target.value
                                                             setCustomColor(c)
-                                                            applyColor(c, false) // Apply immediately but keep menu
+                                                            applyColor(c, false)
                                                         }}
                                                         className="w-full h-full rounded cursor-pointer opacity-0 absolute inset-0 z-10"
                                                     />
@@ -380,18 +402,15 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                                         <div className="w-full h-full rounded border-2 border-white/20" style={{ backgroundColor: customColor }}></div>
                                                     </div>
                                                 </div>
-
                                                 <div className="flex-1 min-w-0">
                                                     <span className="text-xs font-mono text-slate-300 block">{customColor.toUpperCase()}</span>
                                                 </div>
-
-                                                {/* Save Button for Custom Color */}
                                                 <button
                                                     onClick={(e) => {
                                                         e.preventDefault()
                                                         addRecentColor(customColor)
                                                     }}
-                                                    className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded shadow-sm transition-colors z-20 tooltip"
+                                                    className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded shadow-sm transition-colors z-20"
                                                     title={language === 'fi' ? 'Tallenna väri' : 'Save Color'}
                                                 >
                                                     <Save className="w-3.5 h-3.5" />
@@ -399,13 +418,12 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                             </label>
                                         </div>
 
-                                        {/* 2. Saved/Recent Colors Grid (Bottom) */}
+                                        {/* Saved Colors Grid */}
                                         <div className="border-t border-slate-800 pt-3">
                                             <div className="text-xs font-semibold text-slate-500 mb-2 uppercase flex justify-between items-center">
                                                 {language === 'fi' ? 'Tallennetut' : 'Saved Colors'}
                                                 <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">{recentColors.length}/10</span>
                                             </div>
-
                                             {recentColors.length === 0 ? (
                                                 <div className="text-xs text-slate-600 italic py-2 text-center">
                                                     {language === 'fi' ? 'Ei tallennettuja värejä' : 'No saved colors'}
@@ -420,7 +438,6 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                                                 style={{ backgroundColor: c }}
                                                                 title={c}
                                                             />
-                                                            {/* Delete Button (X) - Top Right Overlay */}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation()
@@ -437,7 +454,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                             )}
                                         </div>
 
-                                        {/* Deletion Confirmation Dialog Overlay */}
+                                        {/* Deletion Warning Overlay */}
                                         {colorToDelete && (
                                             <div className="absolute inset-0 bg-slate-900 border border-rose-500/30 rounded-lg z-[100] flex flex-col items-center justify-center p-4 text-center animate-in fade-in zoom-in duration-200">
                                                 <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center mb-3">
@@ -477,119 +494,97 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                     </div>
                                 )}
                             </div>
-                            <div className="w-px h-6 bg-slate-800 mx-1"></div>
+                            <div className="w-px h-6 bg-slate-800 mx-2"></div>
                         </>
                     )}
 
-                    {/* Translate (Icon Only) */}
-                    <div className="relative" ref={translateMenuRef}>
+                    {/* Group 3: Utilities (Translate, Source, Export) */}
+                    <div className="flex items-center gap-1">
+                        {/* Translate */}
+                        <div className="relative" ref={translateMenuRef}>
+                            <button
+                                onClick={() => setShowTranslateMenu(!showTranslateMenu)}
+                                disabled={isTranslating}
+                                className="p-2 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-50"
+                                title={language === 'fi' ? 'Käännä' : 'Translate'}
+                            >
+                                {isTranslating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Languages className="w-5 h-5" />}
+                            </button>
+                            {showTranslateMenu && !isTranslating && (
+                                <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
+                                    <button onClick={() => handleTranslate('en')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                        <span className="text-xs font-bold bg-slate-800 px-1.5 py-0.5 rounded text-indigo-400">EN</span> English
+                                    </button>
+                                    <button onClick={() => handleTranslate('fi')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                        <span className="text-xs font-bold bg-slate-800 px-1.5 py-0.5 rounded text-indigo-400">FI</span> Suomi
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Export */}
+                        <div className="relative" ref={exportMenuRef}>
+                            <button
+                                onClick={() => setShowExportMenu(!showExportMenu)}
+                                className="p-2 text-slate-400 hover:text-sky-400 hover:bg-slate-800 rounded-lg transition-all"
+                                title={language === 'fi' ? "Vie tiedostona" : "Export"}
+                            >
+                                <Download className="w-5 h-5" />
+                            </button>
+                            {showExportMenu && (
+                                <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
+                                    <button onClick={() => handleExport('pdf')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                        <FileText className="w-4 h-4 text-rose-400" /> PDF Document
+                                    </button>
+                                    <button onClick={() => handleExport('md')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                        <Code className="w-4 h-4 text-emerald-400" /> HTML Code
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Source Toggle */}
                         <button
-                            onClick={() => setShowTranslateMenu(!showTranslateMenu)}
-                            disabled={isTranslating}
-                            className="p-2 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-50"
-                            title={language === 'fi' ? 'Käännä' : 'Translate'}
+                            onClick={() => {
+                                if (isSourceMode && editor) editor.commands.setContent(noteContent)
+                                setIsSourceMode(!isSourceMode)
+                            }}
+                            className={`p-2 rounded-lg transition-colors ${isSourceMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
+                            title={language === 'fi' ? "Lähdekoodi / Visuaalinen" : "Source Code / Visual"}
                         >
-                            {isTranslating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Languages className="w-5 h-5" />}
+                            <Code className="w-5 h-5" />
                         </button>
-                        {showTranslateMenu && !isTranslating && (
-                            <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                <button onClick={() => handleTranslate('en')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                    <span className="text-xs font-bold bg-slate-800 px-1.5 py-0.5 rounded text-indigo-400">EN</span> English
-                                </button>
-                                <button onClick={() => handleTranslate('fi')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                    <span className="text-xs font-bold bg-slate-800 px-1.5 py-0.5 rounded text-indigo-400">FI</span> Suomi
-                                </button>
-                            </div>
-                        )}
                     </div>
 
-                    {/* Export (Icon Only) */}
-                    <div className="relative" ref={exportMenuRef}>
+                    <div className="w-px h-6 bg-slate-800 mx-2"></div>
+
+                    {/* Group 4: Global Actions (New, Save, Logout) */}
+                    <div className="flex items-center gap-1.5">
                         <button
-                            onClick={() => setShowExportMenu(!showExportMenu)}
-                            className="p-2 text-slate-400 hover:text-sky-400 hover:bg-slate-800 rounded-lg transition-all"
-                            title={language === 'fi' ? "Vie tiedostona" : "Export"}
+                            onClick={() => createNote()}
+                            className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95"
+                            title={language === 'fi' ? 'Uusi suunnitelma' : 'New Plan'}
                         >
-                            <Download className="w-5 h-5" />
+                            <Plus className="w-5 h-5" />
                         </button>
-                        {showExportMenu && (
-                            <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                <button onClick={() => handleExport('pdf')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                    <FileText className="w-4 h-4 text-rose-400" /> PDF Document
-                                </button>
-                                <button onClick={() => handleExport('md')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                    <Code className="w-4 h-4 text-emerald-400" /> HTML Code
-                                </button>
-                            </div>
-                        )}
+
+                        <button
+                            onClick={() => saveNote(true)}
+                            disabled={isSaving}
+                            className="p-2 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30 rounded-lg transition-all disabled:opacity-50"
+                            title={language === 'fi' ? "Tallenna" : "Save"}
+                        >
+                            {isManualSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        </button>
+
+                        <button
+                            onClick={onLogout}
+                            className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-all"
+                            title={language === 'fi' ? 'Kirjaudu ulos' : 'Log out'}
+                        >
+                            <LogOut className="w-5 h-5" />
+                        </button>
                     </div>
-
-                    <div className="w-px h-6 bg-slate-800 mx-1"></div>
-
-                    {/* Indent / Outdent */}
-                    {!isSourceMode && editor && (
-                        <>
-                            <button
-                                onClick={() => editor.chain().focus().liftListItem('listItem').run()}
-                                disabled={!editor.can().liftListItem('listItem')}
-                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-30"
-                                title={language === 'fi' ? "Vähennä sisennystä" : "Decrease Indent"}
-                            >
-                                <Outdent className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
-                                disabled={!editor.can().sinkListItem('listItem')}
-                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-30"
-                                title={language === 'fi' ? "Lisää sisennystä" : "Increase Indent"}
-                            >
-                                <Indent className="w-5 h-5" />
-                            </button>
-                            <div className="w-px h-6 bg-slate-800 mx-1"></div>
-                        </>
-                    )}
-
-                    {/* HTML/Source Toggle */}
-                    <button
-                        onClick={() => {
-                            if (isSourceMode && editor) editor.commands.setContent(noteContent)
-                            setIsSourceMode(!isSourceMode)
-                        }}
-                        className={`p-2 rounded-lg transition-colors ${isSourceMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
-                        title={language === 'fi' ? "Lähdekoodi / Visuaalinen" : "Source Code / Visual"}
-                    >
-                        {isSourceMode ? <Eye className="w-5 h-5" /> : <Code className="w-5 h-5" />}
-                    </button>
-
-                    <div className="w-px h-6 bg-slate-800 mx-1"></div>
-
-                    {/* Plus (New Plan) - Always Colored */}
-                    <button
-                        onClick={() => createNote()}
-                        className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95"
-                        title={language === 'fi' ? 'Uusi suunnitelma' : 'New Plan'}
-                    >
-                        <Plus className="w-5 h-5" />
-                    </button>
-
-                    {/* Save Button - Grouped at end */}
-                    <button
-                        onClick={() => saveNote(true)}
-                        disabled={isSaving}
-                        className="p-2 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30 rounded-lg transition-all disabled:opacity-50 ml-1"
-                        title={language === 'fi' ? "Tallenna" : "Save"}
-                    >
-                        {isManualSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                    </button>
-
-                    {/* Logout */}
-                    <button
-                        onClick={onLogout}
-                        className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-all ml-1"
-                        title={language === 'fi' ? 'Kirjaudu ulos' : 'Log out'}
-                    >
-                        <LogOut className="w-5 h-5" />
-                    </button>
                 </div>
             </div>
 
