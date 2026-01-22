@@ -88,6 +88,8 @@ function App() {
         setUser(null)
         setView('landing')
         setShowLogoutConfirm(false)
+        // Clean up URL (remove # or query params if any remain)
+        window.history.replaceState(null, '', window.location.pathname)
     }
 
     return (
