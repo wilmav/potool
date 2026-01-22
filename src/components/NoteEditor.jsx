@@ -121,14 +121,16 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         setShowHeaderMenu(false)
     }
 
-    const applyColor = (color) => {
+    const applyColor = (color, closeMenu = true) => {
         if (!editor) return
         editor.chain().focus().setColor(color).run()
 
         if (!recentColors.includes(color)) {
             addRecentColor(color)
         }
-        setShowColorMenu(false)
+        if (closeMenu) {
+            setShowColorMenu(false)
+        }
     }
 
     const handleExport = (type) => {
@@ -353,7 +355,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                                         onChange={(e) => {
                                                             const c = e.target.value
                                                             setCustomColor(c)
-                                                            applyColor(c) // Auto-apply
+                                                            applyColor(c, false) // Keep menu open
                                                         }}
                                                         className="w-8 h-8 rounded cursor-pointer opacity-0 absolute inset-0 z-10"
                                                     />
@@ -383,10 +385,10 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         </button>
                         {showTranslateMenu && !isTranslating && (
                             <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
-                                <button onClick={() => handleTranslate('en-GB')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                <button onClick={() => handleTranslate('en')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
                                     <span className="text-xs font-bold bg-slate-800 px-1.5 py-0.5 rounded text-indigo-400">EN</span> English
                                 </button>
-                                <button onClick={() => handleTranslate('fi-FI')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                <button onClick={() => handleTranslate('fi')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
                                     <span className="text-xs font-bold bg-slate-800 px-1.5 py-0.5 rounded text-indigo-400">FI</span> Suomi
                                 </button>
                             </div>

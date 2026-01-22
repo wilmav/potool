@@ -299,7 +299,7 @@ export const useStore = create(persist((set, get) => ({
             // Use provided targetLangCode, or fallback to inverse of current UI language
             let targetLang = targetLangCode
             if (!targetLang) {
-                targetLang = language === 'fi' ? 'fi-FI' : 'en-GB'
+                targetLang = language === 'fi' ? 'fi' : 'en'
             }
 
             const langPair = `AUTODETECT|${targetLang}`
