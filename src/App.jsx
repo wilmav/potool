@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useStore } from './store'
 import { supabase } from './supabase'
 import { Sidebar } from './components/Sidebar'
 import { NoteEditor } from './components/NoteEditor'
 import { Auth } from './components/Auth'
 import { LandingPage } from './components/LandingPage'
-import { Layout, Globe, LogOut, Sparkles } from 'lucide-react'
+import { Layout, Globe, LogOut, Sparkles, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react'
 
 function App() {
     const { language, setLanguage, user, setUser, fetchBullets, activeNoteId, saveNote } = useStore() // Added activeNoteId, saveNote
@@ -35,6 +35,36 @@ function App() {
 
     const [view, setView] = useState('landing') // 'landing' | 'login'
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+    const [sidebarWidth, setSidebarWidth] = useState(400)
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+    const [isResizing, setIsResizing] = useState(false)
+    const sidebarRef = useRef(null)
+
+    const startResizing = (mouseDownEvent) => {
+        setIsResizing(true)
+    }
+
+    const stopResizing = () => {
+        setIsResizing(false)
+    }
+
+    const resize = (mouseMoveEvent) => {
+        if (isResizing) {
+            const newWidth = mouseMoveEvent.clientX
+            if (newWidth > 250 && newWidth < 800) {
+                setSidebarWidth(newWidth)
+            }
+        }
+    }
+
+    useEffect(() => {
+        window.addEventListener("mousemove", resize)
+        window.addEventListener("mouseup", stopResizing)
+        return () => {
+            window.removeEventListener("mousemove", resize)
+            window.removeEventListener("mouseup", stopResizing)
+        }
+    }, [isResizing])
 
     if (!user) {
         if (view === 'login') {
@@ -98,14 +128,24 @@ function App() {
             )}
 
             {/* Sidebar with Bullet Library - Darker Panel */}
-            <aside className="w-[400px] min-w-[350px] border-r border-slate-800 bg-slate-900/50 backdrop-blur-xl flex flex-col shadow-2xl relative z-20">
+            <aside
+                ref={sidebarRef}
+                className={`border-r border-slate-800 bg-slate-900/50 backdrop-blur-xl flex flex-col shadow-2xl relative z-20 transition-all duration-300 ease-in-out ${isSidebarOpen ? '' : '-ml-[100%]'}`}
+                style={{ width: isSidebarOpen ? sidebarWidth : 0, opacity: isSidebarOpen ? 1 : 0, overflow: 'hidden' }}
+            >
                 {/* Header */}
-                <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 backdrop-blur-md sticky top-0 z-10">
+                <div className="px-6 py-5 border-b border-slate-800 flex justify-between items-center bg-slate-900/80 backdrop-blur-md sticky top-0 z-10 min-w-[350px]">
                     <h1 className="font-bold text-xl flex items-center gap-2.5 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
                         <Layout className="w-6 h-6 text-indigo-400" />
                         PO Tool
                     </h1>
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg lg:hidden"
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                        </button>
                         <button
                             onClick={() => setLanguage(language === 'fi' ? 'en' : 'fi')}
                             className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-lg text-xs font-semibold tracking-wide transition-all text-slate-300 hover:text-white"
@@ -124,10 +164,32 @@ function App() {
                 </div>
 
                 {/* Sidebar Content */}
-                <div className="flex-1 overflow-hidden">
+                <div className="flex-1 overflow-hidden min-w-[350px]">
                     <Sidebar />
                 </div>
             </aside>
+
+            {/* Resizer Handle */}
+            {isSidebarOpen && (
+                <div
+                    className="w-1.5 bg-transparent hover:bg-indigo-500/50 cursor-col-resize z-30 flex items-center justify-center group transition-colors"
+                    onMouseDown={startResizing}
+                >
+                    <div className="h-8 w-1 rounded-full bg-slate-700 group-hover:bg-indigo-400 transition-colors"></div>
+                </div>
+            )}
+
+            {!isSidebarOpen && (
+                <div className="absolute left-4 top-4 z-40">
+                    <button
+                        onClick={() => setIsSidebarOpen(true)}
+                        className="p-2 bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-lg text-slate-400 hover:text-white shadow-lg hover:shadow-indigo-500/20 transition-all font-bold"
+                        title="Open Sidebar"
+                    >
+                        <Layout className="w-5 h-5" />
+                    </button>
+                </div>
+            )}
 
             {/* Main Content: Note Editor - Lighter Dark Panel */}
             <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative">

@@ -70,8 +70,8 @@ export function Sidebar() {
                 <button
                     onClick={() => setView('library')}
                     className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === 'library'
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                            : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                        : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                         }`}
                 >
                     <Layout className="w-4 h-4" />
@@ -80,8 +80,8 @@ export function Sidebar() {
                 <button
                     onClick={() => setView('plans')}
                     className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === 'plans'
-                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                            : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                        : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                         }`}
                 >
                     <FolderOpen className="w-4 h-4" />
@@ -185,8 +185,8 @@ export function Sidebar() {
                                         key={note.id}
                                         onClick={() => loadNote(note.id)}
                                         className={`w-full p-4 rounded-xl border text-left transition-all group ${activeNoteId === note.id
-                                                ? 'bg-indigo-900/20 border-indigo-500/50 shadow-md ring-1 ring-indigo-500/30'
-                                                : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800 hover:border-slate-600'
+                                            ? 'bg-indigo-900/20 border-indigo-500/50 shadow-md ring-1 ring-indigo-500/30'
+                                            : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800 hover:border-slate-600'
                                             }`}
                                     >
                                         <div className="flex items-start justify-between">
@@ -262,11 +262,6 @@ function BulletCard({ bullet, language }) {
                         icon={Check}
                         label={language === 'fi' ? "Aktivoi" : "Activate"}
                     />
-                    <ActionBtn
-                        onClick={() => addToNote(primaryText)}
-                        icon={Plus}
-                        label={language === 'fi' ? "Lisää" : "Add"}
-                    />
                     <button
                         onClick={() => hideBullet(bullet.id)}
                         title={language === 'fi' ? "Piilota" : "Hide"}
@@ -274,6 +269,11 @@ function BulletCard({ bullet, language }) {
                     >
                         <EyeOff className="w-3.5 h-3.5" />
                     </button>
+                    <ActionBtn
+                        onClick={() => addToNote(primaryText)}
+                        icon={Plus}
+                        label={language === 'fi' ? "Lisää" : "Add"}
+                    />
                 </div>
             </div>
 

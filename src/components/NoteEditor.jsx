@@ -1,5 +1,5 @@
 import { useStore } from '../store'
-import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Check, Plus, History, Clock, RotateCcw } from 'lucide-react'
+import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Check, Plus, History, Clock, RotateCcw, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { useState, useEffect, useRef } from 'react'
 
@@ -17,10 +17,17 @@ export function NoteEditor() {
     const [showExportMenu, setShowExportMenu] = useState(false)
     const [showTranslateMenu, setShowTranslateMenu] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
+    const [showHeaderMenu, setShowHeaderMenu] = useState(false)
+    const [showColorMenu, setShowColorMenu] = useState(false)
+    const [isPreviewMode, setIsPreviewMode] = useState(false)
+    const [recentColors, setRecentColors] = useState(['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6'])
+    const [customColor, setCustomColor] = useState('#ffffff')
 
     const translateMenuRef = useRef(null)
     const exportMenuRef = useRef(null)
     const historyMenuRef = useRef(null)
+    const headerMenuRef = useRef(null)
+    const colorMenuRef = useRef(null)
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -32,6 +39,12 @@ export function NoteEditor() {
             }
             if (historyMenuRef.current && !historyMenuRef.current.contains(event.target)) {
                 setShowHistory(false)
+            }
+            if (headerMenuRef.current && !headerMenuRef.current.contains(event.target)) {
+                setShowHeaderMenu(false)
+            }
+            if (colorMenuRef.current && !colorMenuRef.current.contains(event.target)) {
+                setShowColorMenu(false)
             }
         }
 
@@ -57,6 +70,89 @@ export function NoteEditor() {
         await translateNoteContent(targetLang)
     }
 
+    const insertHeader = (level) => {
+        const textarea = document.querySelector('textarea');
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = noteContent;
+        const before = text.substring(0, start);
+        const after = text.substring(end);
+
+        // Find the start of the current line
+        const lastNewLine = before.lastIndexOf('\n');
+        const lineStart = lastNewLine === -1 ? 0 : lastNewLine + 1;
+
+        // Check if line already has a header
+        const currentLinePrefix = text.substring(lineStart, start);
+        const headerMatch = currentLinePrefix.match(/^(#+)\s/);
+
+        let newContent;
+        let newCursorPos;
+
+        const headerSyntax = '#'.repeat(level) + ' ';
+
+        if (headerMatch) {
+            // Remove existing header
+            const lineContent = text.substring(lineStart);
+            const cleanLine = lineContent.replace(/^(#+)\s/, '');
+
+            // If selecting same level, just remove it (toggle off)
+            if (headerMatch[1].length === level) {
+                newContent = text.substring(0, lineStart) + cleanLine;
+                newCursorPos = lineStart + (start - lineStart - headerMatch[0].length);
+            } else {
+                newContent = text.substring(0, lineStart) + headerSyntax + cleanLine;
+                newCursorPos = lineStart + headerSyntax.length + (start - lineStart - headerMatch[0].length);
+            }
+        } else {
+            // Add new header
+            newContent = before.substring(0, lineStart) + headerSyntax + before.substring(lineStart) + after;
+            newCursorPos = start + headerSyntax.length;
+        }
+
+        setNoteContent(newContent);
+        setShowHeaderMenu(false);
+
+        // Restore focus and cursor
+        setTimeout(() => {
+            textarea.focus();
+            textarea.setSelectionRange(newCursorPos, newCursorPos);
+        }, 0);
+    }
+
+    const insertColor = (color) => {
+        const textarea = document.querySelector('textarea');
+        if (!textarea) return;
+
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = noteContent;
+
+        if (start === end) return; // No selection
+
+        const selection = text.substring(start, end);
+        const coloredText = `<span style="color: ${color}">${selection}</span>`;
+        const newContent = text.substring(0, start) + coloredText + text.substring(end);
+
+        setNoteContent(newContent);
+
+        // Add to recent if not exists
+        if (!recentColors.includes(color)) {
+            setRecentColors(prev => [color, ...prev].slice(0, 10));
+        }
+
+        setShowColorMenu(false);
+
+        setTimeout(() => {
+            textarea.focus();
+            // Move cursor to end of inserted span
+            const newPos = start + coloredText.length;
+            textarea.setSelectionRange(newPos, newPos);
+        }, 0);
+    }
+
     const handleExport = (type) => {
         const dateStr = new Date().toISOString().split('T')[0]
         const filename = `${noteTitle.replace(/[^a-z0-9]/gi, '_')}_${dateStr}`
@@ -64,14 +160,81 @@ export function NoteEditor() {
         if (type === 'pdf') {
             const doc = new jsPDF()
 
-            // Add title
-            doc.setFontSize(20)
-            doc.text(noteTitle, 20, 20)
+            // Margins
+            const marginLeft = 20;
+            const marginTop = 20;
+            const lineHeight = 7;
+            const pageWidth = 210; // A4 width in mm
+            const maxLineWidth = pageWidth - (marginLeft * 2);
 
-            // Add content
-            doc.setFontSize(12)
-            const splitText = doc.splitTextToSize(noteContent, 170)
-            doc.text(splitText, 20, 40)
+            let cursorY = marginTop;
+
+            // Add title
+            doc.setFontSize(24);
+            doc.setFont("helvetica", "bold");
+            doc.text(noteTitle, marginLeft, cursorY);
+            cursorY += 15;
+
+            // Process content line by line
+            const lines = noteContent.split('\n');
+
+            lines.forEach((line) => {
+                // Check for page break
+                if (cursorY > 280) {
+                    doc.addPage();
+                    cursorY = marginTop;
+                }
+
+                let fontSize = 11;
+                let fontStyle = "normal";
+                let textToPrint = line;
+                let currentLineHeight = lineHeight;
+                let spacingAfter = 0;
+
+                // Determine style based on markdown headers
+                if (line.startsWith('# ')) {
+                    fontSize = 20;
+                    fontStyle = "bold";
+                    textToPrint = line.substring(2);
+                    currentLineHeight = 12;
+                    spacingAfter = 4;
+                } else if (line.startsWith('## ')) {
+                    fontSize = 16;
+                    fontStyle = "bold";
+                    textToPrint = line.substring(3);
+                    currentLineHeight = 10;
+                    spacingAfter = 3;
+                } else if (line.startsWith('### ')) {
+                    fontSize = 14;
+                    fontStyle = "bold";
+                    textToPrint = line.substring(4);
+                    currentLineHeight = 8;
+                    spacingAfter = 2;
+                } else if (line.startsWith('#### ')) {
+                    fontSize = 12;
+                    fontStyle = "bold";
+                    textToPrint = line.substring(5);
+                    currentLineHeight = 8;
+                    spacingAfter = 2;
+                }
+
+                doc.setFontSize(fontSize);
+                doc.setFont("helvetica", fontStyle);
+
+                // Split long lines
+                const splitText = doc.splitTextToSize(textToPrint, maxLineWidth);
+
+                splitText.forEach(subLine => {
+                    if (cursorY > 280) {
+                        doc.addPage();
+                        cursorY = marginTop;
+                    }
+                    doc.text(subLine, marginLeft, cursorY);
+                    cursorY += currentLineHeight;
+                });
+
+                cursorY += spacingAfter;
+            });
 
             doc.save(`${filename}.pdf`)
         } else if (type === 'md') {
@@ -81,6 +244,7 @@ export function NoteEditor() {
             a.href = url
             a.download = (`${filename}.md`)
             a.click()
+            a.remove()
             URL.revokeObjectURL(url)
         }
         setShowExportMenu(false)
@@ -236,6 +400,99 @@ export function NoteEditor() {
                         )}
                     </div>
 
+
+                    <div className="w-px h-6 bg-slate-800 mx-1"></div>
+
+                    {/* Formatting Toolbar */}
+                    <div className="flex items-center gap-1 mr-2">
+                        {/* Header Dropdown */}
+                        <div className="relative" ref={headerMenuRef}>
+                            <button
+                                onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+                                className="flex items-center gap-1 p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded transition-colors"
+                                title="Heading Styles"
+                            >
+                                <Heading1 className="w-4 h-4" />
+                                <ChevronDown className="w-3 h-3" />
+                            </button>
+                            {showHeaderMenu && (
+                                <div className="absolute top-full left-0 mt-2 w-40 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col p-1">
+                                    <button onClick={() => insertHeader(1)} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
+                                        <Heading1 className="w-4 h-4" /> Heading 1
+                                    </button>
+                                    <button onClick={() => insertHeader(2)} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
+                                        <Heading2 className="w-4 h-4" /> Heading 2
+                                    </button>
+                                    <button onClick={() => insertHeader(3)} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
+                                        <Heading3 className="w-4 h-4" /> Heading 3
+                                    </button>
+                                    <button onClick={() => insertHeader(4)} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
+                                        <Heading4 className="w-4 h-4" /> Heading 4
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Color Picker Dropdown */}
+                        <div className="relative" ref={colorMenuRef}>
+                            <button
+                                onClick={() => setShowColorMenu(!showColorMenu)}
+                                className="flex items-center gap-1 p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition-colors"
+                                title="Text Color"
+                            >
+                                <Palette className="w-4 h-4" />
+                                <ChevronDown className="w-3 h-3" />
+                            </button>
+                            {showColorMenu && (
+                                <div className="absolute top-full left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 p-3">
+                                    <div className="text-xs font-semibold text-slate-500 mb-2 uppercase">Recent & Favorites</div>
+                                    <div className="grid grid-cols-5 gap-2 mb-3">
+                                        {recentColors.map(c => (
+                                            <button
+                                                key={c}
+                                                onClick={() => insertColor(c)}
+                                                className="w-8 h-8 rounded-full border border-slate-700 hover:scale-110 transition-transform"
+                                                style={{ backgroundColor: c }}
+                                                title={c}
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="border-t border-slate-800 pt-2">
+                                        <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer hover:text-white">
+                                            <div className="relative">
+                                                <input
+                                                    type="color"
+                                                    value={customColor}
+                                                    onChange={(e) => setCustomColor(e.target.value)}
+                                                    className="w-8 h-8 rounded cursor-pointer opacity-0 absolute inset-0"
+                                                />
+                                                <div className="w-8 h-8 rounded bg-gradient-to-br from-indigo-500 to-rose-500 flex items-center justify-center pointer-events-none">
+                                                    <PenTool className="w-4 h-4 text-white" />
+                                                </div>
+                                            </div>
+                                            <span>Pick Custom...</span>
+                                            <button
+                                                onClick={() => insertColor(customColor)}
+                                                className="ml-auto text-xs bg-slate-800 px-2 py-1 rounded hover:bg-slate-700"
+                                            >
+                                                Apply
+                                            </button>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* View Toggle */}
+                        <button
+                            onClick={() => setIsPreviewMode(!isPreviewMode)}
+                            className={`flex items-center gap-1 p-1.5 rounded transition-colors ml-2 ${isPreviewMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+                            title="Toggle Preview"
+                        >
+                            {isPreviewMode ? <PenTool className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                    </div>
+
                     <div className="w-px h-6 bg-slate-800 mx-1"></div>
 
                     <button
@@ -260,15 +517,43 @@ export function NoteEditor() {
             {/* Editor Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="max-w-4xl mx-auto w-full py-12 px-8 min-h-full">
-                    <textarea
-                        value={noteContent}
-                        onChange={(e) => setNoteContent(e.target.value)}
-                        placeholder={language === 'fi'
-                            ? "Kirjoita suunnitelmasi tähän... \n\nVoit lisätä otsikoita ja aiheita vasemman paneelin kirjastosta painamalla + painiketta."
-                            : "Write your plan here... \n\nAdd headers and topics from the library on the left by clicking the + button."}
-                        className="w-full h-[calc(100vh-200px)] resize-none border-none focus:ring-0 text-slate-300 text-lg leading-relaxed placeholder-slate-700 bg-transparent outline-none font-medium"
-                        spellCheck={false}
-                    />
+                    {isPreviewMode ? (
+                        <div className="prose prose-invert max-w-none">
+                            {/* Simple Markdown+HTML Renderer */}
+                            {noteContent.split('\n').map((line, i) => {
+                                const h1 = line.match(/^# (.*)/);
+                                const h2 = line.match(/^## (.*)/);
+                                const h3 = line.match(/^### (.*)/);
+                                const h4 = line.match(/^#### (.*)/);
+
+                                const content = (h1?.[1] || h2?.[1] || h3?.[1] || h4?.[1] || line).split(/(<span style="color: #[0-9a-fA-F]{6}">.*?<\/span>)/g).map((part, idx) => {
+                                    if (part.startsWith('<span')) {
+                                        const color = part.match(/color: (#[0-9a-fA-F]{6})/)?.[1];
+                                        const text = part.match(/>(.*?)</)?.[1];
+                                        return <span key={idx} style={{ color }}>{text}</span>;
+                                    }
+                                    return <span key={idx}>{part}</span>;
+                                });
+
+                                if (h1) return <h1 key={i} className="text-4xl font-bold mb-4 mt-6 text-slate-100">{content}</h1>;
+                                if (h2) return <h2 key={i} className="text-3xl font-bold mb-3 mt-5 text-slate-100">{content}</h2>;
+                                if (h3) return <h3 key={i} className="text-2xl font-bold mb-2 mt-4 text-slate-100">{content}</h3>;
+                                if (h4) return <h4 key={i} className="text-xl font-bold mb-2 mt-3 text-slate-100">{content}</h4>;
+
+                                return <p key={i} className="mb-2 text-lg text-slate-300 leading-relaxed font-medium min-h-[1.5rem]">{content}</p>;
+                            })}
+                        </div>
+                    ) : (
+                        <textarea
+                            value={noteContent}
+                            onChange={(e) => setNoteContent(e.target.value)}
+                            placeholder={language === 'fi'
+                                ? "Kirjoita suunnitelmasi tähän... \n\nVoit lisätä otsikoita ja aiheita vasemman paneelin kirjastosta painamalla + painiketta."
+                                : "Write your plan here... \n\nAdd headers and topics from the library on the left by clicking the + button."}
+                            className="w-full h-[calc(100vh-200px)] resize-none border-none focus:ring-0 text-slate-300 text-lg leading-relaxed placeholder-slate-700 bg-transparent outline-none font-medium font-mono"
+                            spellCheck={false}
+                        />
+                    )}
                 </div>
             </div>
         </div>
