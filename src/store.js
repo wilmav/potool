@@ -17,17 +17,22 @@ export const useStore = create(persist((set, get) => ({
 
     fetchBullets: async () => {
         set({ loadingBullets: true })
-        const { data, error } = await supabase
-            .from('bullet_templates')
-            .select('*')
 
-        if (error) {
-            console.error('Error fetching bullets:', error)
-        } else {
-            // Init bullets with default state (not active, not hidden)
-            // In future: Merge with 'user_selected_bullets' table
-            const initializedData = data.map(b => ({ ...b, is_active: false, is_hidden: false }))
-            set({ bullets: initializedData })
+        try {
+            const { data, error } = await supabase
+                .from('bullet_templates')
+                .select('*')
+
+            if (error) {
+                console.warn('Fetch bullets warning:', error.message)
+            } else if (data) {
+                // Init bullets with default state (not active, not hidden)
+                // In future: Merge with 'user_selected_bullets' table
+                const initializedData = data.map(b => ({ ...b, is_active: false, is_hidden: false }))
+                set({ bullets: initializedData })
+            }
+        } catch (err) {
+            console.error('Unexpected error fetching bullets:', err)
         }
         set({ loadingBullets: false })
     },
@@ -114,9 +119,10 @@ export const useStore = create(persist((set, get) => ({
     },
 
     addToNote: (text, type = 'h2', color = null) => set((state) => {
+        const inner = color ? `<span style="color: ${color}">${text}</span>` : text
         const element = type === 'h2'
-            ? `<h2 style="${color ? `color: ${color}` : ''}">${text}</h2>`
-            : `<p style="${color ? `color: ${color}` : ''}">${text}</p>`
+            ? `<h2>${inner}</h2>`
+            : `<p>${inner}</p>`
 
         // Append new content and ensure there's at least one empty line after
         const newContent = state.noteContent + element + '<p></p>'

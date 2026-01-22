@@ -12,6 +12,36 @@ export function Auth({ onBack }) {
         setLoading(true)
         setMessage('')
 
+        // 1. Guest Login "Backdoor"
+        if (email.trim() === 'guest-mode') {
+            const { error } = await supabase.auth.signInWithPassword({
+                email: 'guest@potool.com',
+                password: 'guest-password-123',
+            })
+
+            if (error) {
+                console.error('Guest login failed:', error)
+                setMessage('Vieras-kirjautuminen epäonnistui. (Guest login failed.)')
+            } else {
+                // Success is handled by onAuthStateChange in App.jsx
+            }
+            setLoading(false)
+            return
+        }
+
+        // 2. Allowlist Check for Magic Link
+        const ALLOWED_EMAILS = [
+            'wilma.vertaiskuntoutus@gmail.com', // Replace/Add your email
+            'guest@potool.com'
+        ]
+
+        if (!ALLOWED_EMAILS.includes(email.trim().toLowerCase())) {
+            setMessage('Pääsy evätty. Vain valtuutetut käyttäjät. (Access Denied.)')
+            setLoading(false)
+            return
+        }
+
+        // 3. Standard Magic Link
         const { error } = await supabase.auth.signInWithOtp({
             email,
             options: {

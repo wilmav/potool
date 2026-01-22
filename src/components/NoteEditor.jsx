@@ -6,6 +6,10 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import Underline from '@tiptap/extension-underline'
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp } from 'lucide-react'
 
 export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const {
@@ -21,8 +25,8 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const [showExportMenu, setShowExportMenu] = useState(false)
     const [showTranslateMenu, setShowTranslateMenu] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
-    const [showHeaderMenu, setShowHeaderMenu] = useState(false)
-    const [showListMenu, setShowListMenu] = useState(false) // New List Menu
+    const [showTextStyleMenu, setShowTextStyleMenu] = useState(false)
+    const [showListMenu, setShowListMenu] = useState(false)
     const [showColorMenu, setShowColorMenu] = useState(false)
 
     // Toggle between Visual (Tiptap) and Source (HTML Textarea)
@@ -37,8 +41,8 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const translateMenuRef = useRef(null)
     const exportMenuRef = useRef(null)
     const historyMenuRef = useRef(null)
-    const headerMenuRef = useRef(null)
-    const listMenuRef = useRef(null) // New Ref
+    const textStyleMenuRef = useRef(null)
+    const listMenuRef = useRef(null)
     const colorMenuRef = useRef(null)
 
     // Tiptap Editor Initialization
@@ -53,7 +57,12 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                 }
             }),
             TextStyle,
-            Color
+            Color,
+            TaskList,
+            TaskItem.configure({
+                nested: true,
+            }),
+            // Underline is apparently included or duplicated
         ],
         content: noteContent, // Initial content
         editorProps: {
@@ -84,8 +93,8 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
             if (historyMenuRef.current && !historyMenuRef.current.contains(event.target)) {
                 setShowHistory(false)
             }
-            if (headerMenuRef.current && !headerMenuRef.current.contains(event.target)) {
-                setShowHeaderMenu(false)
+            if (textStyleMenuRef.current && !textStyleMenuRef.current.contains(event.target)) {
+                setShowTextStyleMenu(false)
             }
             if (listMenuRef.current && !listMenuRef.current.contains(event.target)) {
                 setShowListMenu(false)
@@ -120,7 +129,18 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const toggleHeader = (level) => {
         if (!editor) return
         editor.chain().focus().toggleHeading({ level }).run()
-        setShowHeaderMenu(false)
+        setShowTextStyleMenu(false)
+    }
+
+    const insertTimestamp = () => {
+        if (!editor) return
+        const now = new Date()
+        const day = String(now.getDate()).padStart(2, '0')
+        const month = String(now.getMonth() + 1).padStart(2, '0')
+        const year = now.getFullYear()
+        const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        const timeStr = `—— ${day}.${month}.${year} ${time} ——`
+        editor.chain().focus().insertContent(`<p><strong>${timeStr}</strong></p>`).run()
     }
 
     const applyColor = (color, closeMenu = true) => {
@@ -287,33 +307,57 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                 </div>
 
                 <div className="flex items-center gap-1">
-
-                    {/* Group 1: Structure (Heading, Lists, Indentation) */}
+                    {/* Group 1: Text Styles & Timestamp */}
                     {!isSourceMode && editor && (
                         <div className="flex items-center gap-1">
-                            {/* Header Dropdown */}
-                            <div className="relative" ref={headerMenuRef}>
+                            {/* Manual Timestamp Button */}
+                            <button
+                                onClick={insertTimestamp}
+                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2"
+                                title={language === 'fi' ? "Lisää aikaleima" : "Add Timestamp"}
+                            >
+                                <div className="relative">
+                                    <Clock className="w-5 h-5" />
+                                    <Plus className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-indigo-600 text-white rounded-full p-0.5" />
+                                </div>
+                            </button>
+
+                            <div className="w-px h-6 bg-slate-800 mx-1"></div>
+
+                            {/* Text Styles Dropdown */}
+                            <div className="relative" ref={textStyleMenuRef}>
                                 <button
-                                    onClick={() => setShowHeaderMenu(!showHeaderMenu)}
+                                    onClick={() => setShowTextStyleMenu(!showTextStyleMenu)}
                                     className="flex items-center gap-1 p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
-                                    title={language === 'fi' ? "Otsikkotyylit" : "Heading Styles"}
+                                    title={language === 'fi' ? "Tekstityylit" : "Text Styles"}
                                 >
-                                    <Heading1 className="w-5 h-5" />
+                                    <Type className="w-5 h-5" />
                                     <ChevronDown className="w-3 h-3" />
                                 </button>
-                                {showHeaderMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-40 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] flex flex-col p-1">
-                                        <button onClick={() => { editor.chain().focus().setParagraph().run(); setShowHeaderMenu(false) }} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
+                                {showTextStyleMenu && (
+                                    <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] flex flex-col p-1">
+                                        <button onClick={() => { editor.chain().focus().setParagraph().run(); setShowTextStyleMenu(false) }} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
                                             <Pilcrow className="w-4 h-4" /> {language === 'fi' ? 'Perusteksti' : 'Normal Text'}
                                         </button>
-                                        <button onClick={() => toggleHeader(1)} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
+                                        <div className="h-px bg-slate-800 my-1"></div>
+                                        <button onClick={() => toggleHeader(1)} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left font-bold ${editor.isActive('heading', { level: 1 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
                                             <Heading1 className="w-4 h-4" /> Heading 1
                                         </button>
-                                        <button onClick={() => toggleHeader(2)} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
+                                        <button onClick={() => toggleHeader(2)} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left font-bold ${editor.isActive('heading', { level: 2 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
                                             <Heading2 className="w-4 h-4" /> Heading 2
                                         </button>
-                                        <button onClick={() => toggleHeader(3)} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
-                                            <Heading3 className="w-4 h-4" /> Heading 3
+                                        <div className="h-px bg-slate-800 my-1"></div>
+                                        <button onClick={() => { editor.chain().focus().toggleBold().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('bold') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Bold className="w-4 h-4" /> {language === 'fi' ? 'Lihavointi' : 'Bold'}
+                                        </button>
+                                        <button onClick={() => { editor.chain().focus().toggleItalic().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('italic') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Italic className="w-4 h-4" /> {language === 'fi' ? 'Kursivointi' : 'Italic'}
+                                        </button>
+                                        <button onClick={() => { editor.chain().focus().toggleUnderline().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('underline') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <UnderlineIcon className="w-4 h-4" /> {language === 'fi' ? 'Alleviivaus' : 'Underline'}
+                                        </button>
+                                        <button onClick={() => { editor.chain().focus().toggleStrike().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('strike') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Strikethrough className="w-4 h-4" /> {language === 'fi' ? 'Yliviivaus' : 'Strikethrough'}
                                         </button>
                                     </div>
                                 )}
@@ -343,27 +387,15 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                         >
                                             <ListOrdered className="w-4 h-4" /> {language === 'fi' ? 'Numeroitu lista' : 'Ordered List'}
                                         </button>
+                                        <button
+                                            onClick={() => { editor.chain().focus().toggleTaskList().run(); setShowListMenu(false) }}
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('taskList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
+                                        >
+                                            <Check className="w-4 h-4" /> {language === 'fi' ? 'Tehtävälista' : 'Task List'}
+                                        </button>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Indent / Outdent */}
-                            <button
-                                onClick={() => editor.chain().focus().liftListItem('listItem').run()}
-                                disabled={!editor.can().liftListItem('listItem')}
-                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-30"
-                                title={language === 'fi' ? "Vähennä sisennystä" : "Decrease Indent"}
-                            >
-                                <Outdent className="w-5 h-5" />
-                            </button>
-                            <button
-                                onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
-                                disabled={!editor.can().sinkListItem('listItem')}
-                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-30"
-                                title={language === 'fi' ? "Lisää sisennystä" : "Increase Indent"}
-                            >
-                                <Indent className="w-5 h-5" />
-                            </button>
                         </div>
                     )}
 
@@ -554,6 +586,18 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         >
                             <Code className="w-5 h-5" />
                         </button>
+
+                        {/* History Toggle */}
+                        <div className="relative" ref={historyMenuRef}>
+                            <button
+                                onClick={() => setShowHistory(!showHistory)}
+                                className={`p-2 rounded-lg transition-colors ${showHistory ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
+                                title={language === 'fi' ? 'Versiohistoria' : 'Version History'}
+                            >
+                                <History className="w-5 h-5" />
+                            </button>
+                            {/* Note: History popup logic would go here or handled by Sidebar/Global state */}
+                        </div>
                     </div>
 
                     <div className="w-px h-6 bg-slate-800 mx-2"></div>
