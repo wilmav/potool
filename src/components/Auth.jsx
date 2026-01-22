@@ -59,6 +59,19 @@ export function Auth({ onBack }) {
         setLoading(false)
     }
 
+    const handleGuestLogin = async () => {
+        setLoading(true)
+        const { error } = await supabase.auth.signInWithPassword({
+            email: 'guest@potool.com',
+            password: 'guest-password-123',
+        })
+        if (error) {
+            console.error('Guest login failed:', error)
+            setMessage('Dev login failed.')
+        }
+        setLoading(false)
+    }
+
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-4 text-slate-200">
             <div className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-800 p-8 sm:p-10 relative">
@@ -100,6 +113,21 @@ export function Auth({ onBack }) {
                         {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Magic Link'}
                     </button>
                 </form>
+
+                {/* Dev Login Button (Only in Development) */}
+                {import.meta.env.DEV && (
+                    <div className="mt-4 pt-4 border-t border-slate-800">
+                        <button
+                            type="button"
+                            onClick={handleGuestLogin}
+                            disabled={loading}
+                            className="w-full py-2 px-4 bg-emerald-900/30 hover:bg-emerald-900/50 text-emerald-400 border border-emerald-900/50 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2"
+                        >
+                            <Layout className="w-4 h-4" />
+                            Dev Login (Guest)
+                        </button>
+                    </div>
+                )}
 
                 {message && (
                     <div className={`mt-6 p-4 rounded-xl text-sm font-medium text-center ${message.startsWith('Error') ? 'bg-rose-950/30 text-rose-400 border border-rose-900/50' : 'bg-emerald-950/30 text-emerald-400 border border-emerald-900/50'}`}>
