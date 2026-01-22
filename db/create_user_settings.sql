@@ -10,7 +10,7 @@ create table if not exists user_settings (
 do $$
 begin
   if not exists (select 1 from information_schema.columns where table_name = 'user_settings' and column_name = 'recent_colors') then
-    alter table user_settings add column recent_colors text[] default array['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6']::text[];
+    alter table user_settings add column recent_colors text[] default array['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ffffff']::text[];
   end if;
 end $$;
 

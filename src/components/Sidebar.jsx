@@ -12,10 +12,10 @@ export function Sidebar() {
     const [view, setView] = useState('library') // 'library' | 'plans'
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedThemes, setExpandedThemes] = useState(new Set(['Discovery', 'Riskit', 'Ideointi', 'Määrittely']))
-    const { categoryColors, setCategoryColor } = useStore() // Use categoryColors from store
+    const { categoryColors, setCategoryColor, recentColors } = useStore() // Use categoryColors from store
     const [colorPickerOpen, setColorPickerOpen] = useState(null) // theme name
 
-    const availableColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ffffff']
+    // const availableColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ffffff']
 
     // Load notes on mount
     useEffect(() => {
@@ -162,7 +162,7 @@ export function Sidebar() {
 
                                                     {colorPickerOpen === theme && (
                                                         <div className="absolute top-full right-0 mt-2 p-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 flex gap-1 animate-in fade-in zoom-in duration-200">
-                                                            {availableColors.map(c => (
+                                                            {recentColors.map(c => (
                                                                 <button
                                                                     key={c}
                                                                     onClick={(e) => {
@@ -223,16 +223,16 @@ export function Sidebar() {
                                             : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800 hover:border-slate-600'
                                             }`}
                                     >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${activeNoteId === note.id ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
+                                        <div className="flex items-center justify-between min-w-0">
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                <div className={`p-2 rounded-lg shrink-0 ${activeNoteId === note.id ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
                                                     <FileText className="w-5 h-5" />
                                                 </div>
-                                                <div>
-                                                    <h3 className={`font-semibold text-sm ${activeNoteId === note.id ? 'text-indigo-100' : 'text-slate-200 group-hover:text-white'}`}>
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className={`font-semibold text-sm truncate pr-2 ${activeNoteId === note.id ? 'text-indigo-100' : 'text-slate-200 group-hover:text-white'}`}>
                                                         {note.title || (language === 'fi' ? 'Nimetön' : 'Untitled')}
                                                     </h3>
-                                                    <span className="text-xs text-slate-500">
+                                                    <span className="text-xs text-slate-500 truncate block">
                                                         {new Date(note.updated_at).toLocaleDateString()} {new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                     </span>
                                                 </div>

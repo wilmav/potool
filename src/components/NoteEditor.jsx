@@ -1,5 +1,5 @@
 import { useStore } from '../store'
-import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut, ChevronRight, Layout, Pilcrow, Indent, Outdent, List, ListOrdered } from 'lucide-react'
+import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut, ChevronRight, Layout, Pilcrow, Indent, Outdent, List, ListOrdered, X, Disc } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { useState, useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -14,9 +14,8 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         language,
         translateNoteContent, isTranslating,
         saveNote, isSaving, createNote,
-        versions, restoreVersion, activeNoteId,
         isManualSaving,
-        recentColors, addRecentColor // Use global state
+        recentColors, addRecentColor, removeRecentColor // Use global state
     } = useStore()
 
     const [showExportMenu, setShowExportMenu] = useState(false)
@@ -31,6 +30,9 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
 
     // Removed local recentColors state
     const [customColor, setCustomColor] = useState('#ffffff')
+
+    // Deletion confirmation state
+    const [colorToDelete, setColorToDelete] = useState(null)
 
     const translateMenuRef = useRef(null)
     const exportMenuRef = useRef(null)
@@ -125,9 +127,9 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         if (!editor) return
         editor.chain().focus().setColor(color).run()
 
-        if (!recentColors.includes(color)) {
-            addRecentColor(color)
-        }
+        // if (!recentColors.includes(color)) {
+        //    addRecentColor(color)
+        // }
         if (closeMenu) {
             setShowColorMenu(false)
         }
@@ -140,63 +142,87 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         const filename = `${noteTitle.replace(/[^a-z0-9]/gi, '_')}_${dateStr}`
 
         if (type === 'pdf') {
-            const doc = new jsPDF()
-            let cursorY = 20
-            const marginLeft = 20
+            const doc = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            })
 
-            // Title
-            doc.setFontSize(24)
+            const margin = 20
+            const pageWidth = doc.internal.pageSize.getWidth()
+            const pageHeight = doc.internal.pageSize.getHeight()
+            const contentWidth = pageWidth - (margin * 2)
+            let cursorY = margin
+
+            // Title Wrapping
+            doc.setFontSize(22)
             doc.setFont("helvetica", "bold")
-            doc.text(noteTitle, marginLeft, cursorY)
-            cursorY += 15
+            const splitTitle = doc.splitTextToSize(noteTitle, contentWidth)
+            doc.text(splitTitle, margin, cursorY)
+            cursorY += (splitTitle.length * 10) + 2
+
+            // Separation Line
+            doc.setDrawColor(200, 200, 200)
+            doc.line(margin, cursorY, pageWidth - margin, cursorY)
+            cursorY += 10
 
             if (editor) {
                 const json = editor.getJSON()
 
                 json.content?.forEach(node => {
-                    if (cursorY > 280) {
+                    // Safety check for page break
+                    if (cursorY > pageHeight - margin - 20) {
                         doc.addPage()
-                        cursorY = 20
+                        cursorY = margin
                     }
 
                     if (node.type === 'heading') {
                         const level = node.attrs?.level || 1
-                        const size = level === 1 ? 20 : level === 2 ? 16 : 14
+                        const size = level === 1 ? 18 : level === 2 ? 16 : 14
                         doc.setFontSize(size)
                         doc.setFont("helvetica", "bold")
                         doc.setTextColor(0, 0, 0)
 
                         const text = node.content?.map(c => c.text).join('') || ''
-                        doc.text(text, marginLeft, cursorY)
-                        cursorY += (size / 2) + 4
+                        const splitText = doc.splitTextToSize(text, contentWidth)
+                        doc.text(splitText, margin, cursorY)
+                        cursorY += (splitText.length * (size / 2)) + 5
                     } else if (node.type === 'paragraph') {
                         doc.setFontSize(11)
                         doc.setFont("helvetica", "normal")
+                        doc.setTextColor(60, 60, 60)
 
-                        let currentX = marginLeft
                         if (!node.content) {
                             cursorY += 5
                             return
                         }
 
-                        node.content.forEach(span => {
-                            const text = span.text
-                            let color = '#000000'
+                        // Combine paragraph text to handle wrapping properly
+                        let fullText = ''
+                        let firstSpanColor = '#000000'
 
-                            if (span.marks) {
+                        node.content.forEach((span, i) => {
+                            fullText += span.text
+                            if (i === 0 && span.marks) {
                                 span.marks.forEach(m => {
                                     if (m.type === 'textStyle' && m.attrs?.color) {
-                                        color = m.attrs.color
+                                        firstSpanColor = m.attrs.color
                                     }
                                 })
                             }
-
-                            doc.setTextColor(color)
-                            doc.text(text, currentX, cursorY)
-                            currentX += doc.getTextWidth(text)
                         })
 
-                        cursorY += 7
+                        doc.setTextColor(firstSpanColor)
+                        const splitLines = doc.splitTextToSize(fullText, contentWidth)
+
+                        // Check for page overflow within paragraph
+                        if (cursorY + (splitLines.length * 6) > pageHeight - margin) {
+                            doc.addPage()
+                            cursorY = margin
+                        }
+
+                        doc.text(splitLines, margin, cursorY)
+                        cursorY += (splitLines.length * 6) + 2
                     }
                 })
             }
@@ -333,39 +359,121 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                     <ChevronDown className="w-3 h-3" />
                                 </button>
                                 {showColorMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 p-3">
-                                        <div className="text-xs font-semibold text-slate-500 mb-2 uppercase">{language === 'fi' ? 'Viimeisimmät' : 'Recent & Favorites'}</div>
-                                        <div className="grid grid-cols-5 gap-2 mb-3">
-                                            {recentColors.map(c => (
-                                                <button
-                                                    key={c}
-                                                    onClick={() => applyColor(c)}
-                                                    className="w-8 h-8 rounded-full border border-slate-700 hover:scale-110 transition-transform"
-                                                    style={{ backgroundColor: c }}
-                                                    title={c}
-                                                />
-                                            ))}
-                                        </div>
-                                        <div className="border-t border-slate-800 pt-2">
-                                            <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer hover:text-white w-full p-1 rounded hover:bg-slate-800 transition-colors">
-                                                <div className="relative shrink-0">
+                                    <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 p-3">
+
+                                        {/* 1. Custom Picker Section (Top) */}
+                                        <div className="mb-4">
+                                            <div className="text-xs font-semibold text-slate-500 mb-2 uppercase">{language === 'fi' ? 'Valitse uusi' : 'Pick New Reference'}</div>
+                                            <label className="flex items-center gap-2 p-2 rounded bg-slate-800 hover:bg-slate-700/80 transition-colors w-full cursor-pointer relative group">
+                                                <div className="relative shrink-0 w-8 h-8">
                                                     <input
                                                         type="color"
                                                         value={customColor}
                                                         onChange={(e) => {
                                                             const c = e.target.value
                                                             setCustomColor(c)
-                                                            applyColor(c, false) // Keep menu open
+                                                            applyColor(c, false) // Apply immediately but keep menu
                                                         }}
-                                                        className="w-8 h-8 rounded cursor-pointer opacity-0 absolute inset-0 z-10"
+                                                        className="w-full h-full rounded cursor-pointer opacity-0 absolute inset-0 z-10"
                                                     />
-                                                    <div className="w-8 h-8 rounded bg-gradient-to-br from-indigo-500 to-rose-500 flex items-center justify-center pointer-events-none">
-                                                        <PenTool className="w-4 h-4 text-white" />
+                                                    <div className="w-8 h-8 rounded bg-gradient-to-br from-indigo-500 to-rose-500 flex items-center justify-center pointer-events-none" style={{ backgroundColor: customColor, backgroundImage: 'none' }}>
+                                                        <div className="w-full h-full rounded border-2 border-white/20" style={{ backgroundColor: customColor }}></div>
                                                     </div>
                                                 </div>
-                                                <span>{language === 'fi' ? 'Valitse oma väri...' : 'Pick Custom Color...'}</span>
+
+                                                <div className="flex-1 min-w-0">
+                                                    <span className="text-xs font-mono text-slate-300 block">{customColor.toUpperCase()}</span>
+                                                </div>
+
+                                                {/* Save Button for Custom Color */}
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.preventDefault()
+                                                        addRecentColor(customColor)
+                                                    }}
+                                                    className="p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded shadow-sm transition-colors z-20 tooltip"
+                                                    title={language === 'fi' ? 'Tallenna väri' : 'Save Color'}
+                                                >
+                                                    <Save className="w-3.5 h-3.5" />
+                                                </button>
                                             </label>
                                         </div>
+
+                                        {/* 2. Saved/Recent Colors Grid (Bottom) */}
+                                        <div className="border-t border-slate-800 pt-3">
+                                            <div className="text-xs font-semibold text-slate-500 mb-2 uppercase flex justify-between items-center">
+                                                {language === 'fi' ? 'Tallennetut' : 'Saved Colors'}
+                                                <span className="text-[10px] bg-slate-800 px-1.5 py-0.5 rounded text-slate-500">{recentColors.length}/10</span>
+                                            </div>
+
+                                            {recentColors.length === 0 ? (
+                                                <div className="text-xs text-slate-600 italic py-2 text-center">
+                                                    {language === 'fi' ? 'Ei tallennettuja värejä' : 'No saved colors'}
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-5 gap-2">
+                                                    {recentColors.map(c => (
+                                                        <div key={c} className="group relative w-8 h-8">
+                                                            <button
+                                                                onClick={() => applyColor(c)}
+                                                                className="w-full h-full rounded-full border border-slate-700 hover:scale-110 transition-transform shadow-sm"
+                                                                style={{ backgroundColor: c }}
+                                                                title={c}
+                                                            />
+                                                            {/* Delete Button (X) - Top Right Overlay */}
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation()
+                                                                    setColorToDelete(c)
+                                                                }}
+                                                                className="absolute -top-1 -right-1 p-0.5 bg-slate-900/80 text-rose-500/60 rounded-full border border-slate-700/50 opacity-100 group-hover:bg-slate-900 group-hover:text-rose-500 transition-all hover:bg-rose-950 hover:text-rose-400 shadow-sm"
+                                                                title={language === 'fi' ? 'Poista' : 'Delete'}
+                                                            >
+                                                                <X className="w-2.5 h-2.5" />
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Deletion Confirmation Dialog Overlay */}
+                                        {colorToDelete && (
+                                            <div className="absolute inset-0 bg-slate-900 border border-rose-500/30 rounded-lg z-[100] flex flex-col items-center justify-center p-4 text-center animate-in fade-in zoom-in duration-200">
+                                                <div className="w-10 h-10 rounded-full bg-rose-500/10 flex items-center justify-center mb-3">
+                                                    <X className="w-5 h-5 text-rose-500" />
+                                                </div>
+                                                <p className="text-sm font-bold text-white mb-1">
+                                                    {language === 'fi' ? 'Poistetaanko väri?' : 'Delete color?'}
+                                                </p>
+                                                <p className="text-[11px] text-slate-400 mb-4 leading-relaxed">
+                                                    {language === 'fi'
+                                                        ? 'Väri poistuu valikosta. Tämä ei muuta jo luotuja otsikoita.'
+                                                        : 'Color will be removed from session. Already created headers won\'t change.'}
+                                                </p>
+                                                <div className="flex gap-2 w-full">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setColorToDelete(null)
+                                                        }}
+                                                        className="flex-1 px-2 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors"
+                                                    >
+                                                        {language === 'fi' ? 'Peruuta' : 'Cancel'}
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            removeRecentColor(colorToDelete)
+                                                            setColorToDelete(null)
+                                                        }}
+                                                        className="flex-1 px-2 py-2 text-xs font-medium bg-rose-600 hover:bg-rose-500 text-white rounded-md transition-colors shadow-lg shadow-rose-900/20"
+                                                    >
+                                                        {language === 'fi' ? 'Poista' : 'Delete'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>

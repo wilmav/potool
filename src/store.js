@@ -69,12 +69,18 @@ export const useStore = create(persist((set, get) => ({
         get().saveUserSettings()
     },
 
-    recentColors: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6'],
+    recentColors: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ffffff'],
     addRecentColor: (color) => {
         set(state => {
             const newColors = [color, ...state.recentColors.filter(c => c !== color)].slice(0, 10)
             return { recentColors: newColors }
         })
+        get().saveUserSettings()
+    },
+    removeRecentColor: (color) => {
+        set(state => ({
+            recentColors: state.recentColors.filter(c => c !== color)
+        }))
         get().saveUserSettings()
     },
 
@@ -91,7 +97,7 @@ export const useStore = create(persist((set, get) => ({
             set({
                 categoryColors: data.category_colors || {},
                 language: data.language || 'fi',
-                recentColors: data.recent_colors || ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6']
+                recentColors: data.recent_colors || ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ffffff']
             })
         }
     },
@@ -108,12 +114,13 @@ export const useStore = create(persist((set, get) => ({
     },
 
     addToNote: (text, type = 'h2', color = null) => set((state) => {
-        const innerContent = color ? `<span style="color: ${color}">${text}</span>` : text
-        const tag = type === 'h2' ? 'h2' : 'p'
-        const element = `<${tag}>${innerContent}</${tag}>`
-        return {
-            noteContent: state.noteContent + (state.noteContent ? '<p></p>' : '') + element + '<p></p>'
-        }
+        const element = type === 'h2'
+            ? `<h2 style="${color ? `color: ${color}` : ''}">${text}</h2>`
+            : `<p style="${color ? `color: ${color}` : ''}">${text}</p>`
+
+        // Append new content and ensure there's at least one empty line after
+        const newContent = state.noteContent + element + '<p></p>'
+        return { noteContent: newContent }
     }),
 
     // Cloud Actions
@@ -339,6 +346,7 @@ export const useStore = create(persist((set, get) => ({
         noteTitle: state.noteTitle,
         activeNoteId: state.activeNoteId,
         categoryColors: state.categoryColors,
-        language: state.language
+        language: state.language,
+        recentColors: state.recentColors
     }),
 }))
