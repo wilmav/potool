@@ -62,9 +62,50 @@ export const useStore = create(persist((set, get) => ({
     setNoteTitle: (title) => set({ noteTitle: title }),
 
     categoryColors: {},
-    setCategoryColor: (topic, color) => set(state => ({
-        categoryColors: { ...state.categoryColors, [topic]: color }
-    })),
+    setCategoryColor: (topic, color) => {
+        set(state => ({
+            categoryColors: { ...state.categoryColors, [topic]: color }
+        }))
+        get().saveUserSettings()
+    },
+
+    recentColors: ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6'],
+    addRecentColor: (color) => {
+        set(state => {
+            const newColors = [color, ...state.recentColors.filter(c => c !== color)].slice(0, 10)
+            return { recentColors: newColors }
+        })
+        get().saveUserSettings()
+    },
+
+    setLanguage: (lang) => {
+        set({ language: lang })
+        get().saveUserSettings()
+    },
+
+    fetchUserSettings: async () => {
+        const { user } = get()
+        if (!user) return
+        const { data } = await supabase.from('user_settings').select('*').eq('user_id', user.id).single()
+        if (data) {
+            set({
+                categoryColors: data.category_colors || {},
+                language: data.language || 'fi',
+                recentColors: data.recent_colors || ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6']
+            })
+        }
+    },
+
+    saveUserSettings: async () => {
+        const { user, categoryColors, language, recentColors } = get()
+        if (!user) return
+        await supabase.from('user_settings').upsert({
+            user_id: user.id,
+            category_colors: categoryColors,
+            language: language,
+            recent_colors: recentColors
+        })
+    },
 
     addToNote: (text, type = 'h2', color = null) => set((state) => {
         const innerContent = color ? `<span style="color: ${color}">${text}</span>` : text
@@ -296,6 +337,8 @@ export const useStore = create(persist((set, get) => ({
     partialize: (state) => ({
         noteContent: state.noteContent,
         noteTitle: state.noteTitle,
-        activeNoteId: state.activeNoteId
+        activeNoteId: state.activeNoteId,
+        categoryColors: state.categoryColors,
+        language: state.language
     }),
 }))

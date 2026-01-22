@@ -1,5 +1,5 @@
 import { useStore } from '../store'
-import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut } from 'lucide-react'
+import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut, ChevronRight, Layout, Pilcrow, Indent, Outdent, List, ListOrdered } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { useState, useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
@@ -7,7 +7,7 @@ import StarterKit from '@tiptap/starter-kit'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 
-export function NoteEditor({ onLogout, isSidebarOpen }) {
+export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const {
         noteContent, setNoteContent,
         noteTitle, setNoteTitle,
@@ -15,31 +15,41 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
         translateNoteContent, isTranslating,
         saveNote, isSaving, createNote,
         versions, restoreVersion, activeNoteId,
-        isManualSaving
+        isManualSaving,
+        recentColors, addRecentColor // Use global state
     } = useStore()
 
     const [showExportMenu, setShowExportMenu] = useState(false)
     const [showTranslateMenu, setShowTranslateMenu] = useState(false)
     const [showHistory, setShowHistory] = useState(false)
     const [showHeaderMenu, setShowHeaderMenu] = useState(false)
+    const [showListMenu, setShowListMenu] = useState(false) // New List Menu
     const [showColorMenu, setShowColorMenu] = useState(false)
 
     // Toggle between Visual (Tiptap) and Source (HTML Textarea)
     const [isSourceMode, setIsSourceMode] = useState(false)
 
-    const [recentColors, setRecentColors] = useState(['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6'])
+    // Removed local recentColors state
     const [customColor, setCustomColor] = useState('#ffffff')
 
     const translateMenuRef = useRef(null)
     const exportMenuRef = useRef(null)
     const historyMenuRef = useRef(null)
     const headerMenuRef = useRef(null)
+    const listMenuRef = useRef(null) // New Ref
     const colorMenuRef = useRef(null)
 
     // Tiptap Editor Initialization
     const editor = useEditor({
         extensions: [
-            StarterKit,
+            StarterKit.configure({
+                heading: {
+                    levels: [1, 2, 3],
+                    HTMLAttributes: {
+                        class: 'font-bold', // Maintain default styling
+                    }
+                }
+            }),
             TextStyle,
             Color
         ],
@@ -50,11 +60,6 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
             },
         },
         onUpdate: ({ editor }) => {
-            // Update store logic
-            // Note: We avoid setting noteContent on every keystroke to store directly if it causes re-renders loop
-            // But here we rely on the debounce in useEffect below or update store immediately
-            // Since useStore is external, updating it might trigger re-render of this component
-            // We'll update the store, and handle the "external update" in useEffect carefully.
             setNoteContent(editor.getHTML())
         },
     })
@@ -62,16 +67,6 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
     // Sync external updates (e.g. from Version History or Database Load) to Editor
     useEffect(() => {
         if (editor && noteContent !== editor.getHTML()) {
-            // Only update if content is meaningfully different to avoid cursor jumping
-            // or if the editor is empty (initial load)
-
-            // A simple string check often fails due to normalization (e.g. <p></p> vs empty)
-            // But for restoration features, we need this.
-
-            // Allow focus check: if user is typing, avoid overwriting unless it's a remote change
-            // Ideally we'd track "last updated by" but for now:
-
-            // If the content is vastly different (restoring version), update it.
             editor.commands.setContent(noteContent)
         }
     }, [noteContent, editor])
@@ -89,6 +84,9 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
             }
             if (headerMenuRef.current && !headerMenuRef.current.contains(event.target)) {
                 setShowHeaderMenu(false)
+            }
+            if (listMenuRef.current && !listMenuRef.current.contains(event.target)) {
+                setShowListMenu(false)
             }
             if (colorMenuRef.current && !colorMenuRef.current.contains(event.target)) {
                 setShowColorMenu(false)
@@ -128,19 +126,13 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
         editor.chain().focus().setColor(color).run()
 
         if (!recentColors.includes(color)) {
-            setRecentColors(prev => [color, ...prev].slice(0, 10))
+            addRecentColor(color)
         }
         setShowColorMenu(false)
     }
 
     const handleExport = (type) => {
         if (!editor && !isSourceMode) return
-
-        // For processing, use the raw HTML content (noteContent)
-        // We need a way to convert HTML to text/lines for PDF
-        // Since we already have a parser in previous version, we need to adapt it 
-        // OR simply rely on a basic strip tags for now or improve it.
-        // For this iteration, we keep the previous logic but parse HTML tags instead of markdown.
 
         const dateStr = new Date().toISOString().split('T')[0]
         const filename = `${noteTitle.replace(/[^a-z0-9]/gi, '_')}_${dateStr}`
@@ -156,16 +148,10 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
             doc.text(noteTitle, marginLeft, cursorY)
             cursorY += 15
 
-            // Simple HTML to Text parser for PDF
-            // This is a simplified approach. Better would be html2canvas or pdfmake.
-            // We iterate over the JSON structure of Tiptap for best results? 
-            // editor.getJSON() gives us structured data!
-
             if (editor) {
                 const json = editor.getJSON()
 
                 json.content?.forEach(node => {
-                    // Check for page break
                     if (cursorY > 280) {
                         doc.addPage()
                         cursorY = 20
@@ -176,7 +162,7 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
                         const size = level === 1 ? 20 : level === 2 ? 16 : 14
                         doc.setFontSize(size)
                         doc.setFont("helvetica", "bold")
-                        doc.setTextColor(0, 0, 0) // Default black for headers
+                        doc.setTextColor(0, 0, 0)
 
                         const text = node.content?.map(c => c.text).join('') || ''
                         doc.text(text, marginLeft, cursorY)
@@ -185,12 +171,7 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
                         doc.setFontSize(11)
                         doc.setFont("helvetica", "normal")
 
-                        // Handle colored spans in Tiptap JSON
-                        // Content is array of { type: 'text', text: 'foo', marks: [{ type: 'textStyle', attrs: { color: '...' }}] }
-
                         let currentX = marginLeft
-
-                        // If empty paragraph, add spacing
                         if (!node.content) {
                             cursorY += 5
                             return
@@ -200,7 +181,6 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
                             const text = span.text
                             let color = '#000000'
 
-                            // Check marks
                             if (span.marks) {
                                 span.marks.forEach(m => {
                                     if (m.type === 'textStyle' && m.attrs?.color) {
@@ -210,9 +190,6 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
                             }
 
                             doc.setTextColor(color)
-
-                            // Naive wrapping logic for mixed colors is hard
-                            // For this MVP, we just write it.
                             doc.text(text, currentX, cursorY)
                             currentX += doc.getTextWidth(text)
                         })
@@ -224,12 +201,11 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
 
             doc.save(`${filename}.pdf`)
         } else if (type === 'md') {
-            // Downloading HTML as content
             const blob = new Blob([noteContent], { type: 'text/html' })
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = (`${filename}.html`) // Changed to .html
+            a.download = (`${filename}.html`)
             a.click()
             a.remove()
             URL.revokeObjectURL(url)
@@ -240,31 +216,45 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
     return (
         <div className="flex flex-col h-full relative z-10">
             {/* Toolbar */}
-            <div className={`h-20 px-8 border-b border-slate-800/50 flex items-center justify-between shrink-0 bg-slate-950/50 backdrop-blur-sm transition-all duration-300 ${!isSidebarOpen ? 'pl-48' : ''}`}>
-                <div className="flex-1 mr-8">
-                    <input
-                        type="text"
-                        value={noteTitle}
-                        onChange={(e) => setNoteTitle(e.target.value)}
-                        placeholder="Untitled Plan"
-                        className="text-2xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-slate-600 w-full text-slate-100"
-                    />
-                    <div className="flex items-center gap-2 mt-1">
-                        {isSaving ? (
-                            <>
-                                <Loader2 className="w-3 h-3 text-indigo-400 animate-spin" />
-                                <p className="text-xs font-medium text-indigo-400">
-                                    {language === 'fi' ? 'Tallennetaan...' : 'Saving...'}
-                                </p>
-                            </>
-                        ) : (
-                            <>
-                                <Cloud className="w-3 h-3 text-emerald-500" />
-                                <p className="text-xs font-medium text-slate-500">
-                                    {language === 'fi' ? 'Tallennettu pilveen' : 'Saved to cloud'}
-                                </p>
-                            </>
-                        )}
+            <div className={`h-20 px-8 border-b border-slate-800/50 flex items-center justify-between shrink-0 bg-slate-950/50 backdrop-blur-sm transition-all duration-300`}>
+                <div className="flex-1 mr-8 flex items-center gap-4">
+                    {!isSidebarOpen && (
+                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-300 mr-4">
+                            <button
+                                onClick={onOpenSidebar}
+                                className="p-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg text-indigo-400 hover:text-white shadow-lg hover:shadow-indigo-500/20 transition-all group"
+                                title={language === 'fi' ? "Avaa sivupalkki" : "Open Sidebar"}
+                            >
+                                <ChevronRight className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                            </button>
+                        </div>
+                    )}
+
+                    <div className="flex-1">
+                        <input
+                            type="text"
+                            value={noteTitle}
+                            onChange={(e) => setNoteTitle(e.target.value)}
+                            placeholder="Untitled Plan"
+                            className="text-2xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-slate-600 w-full text-slate-100"
+                        />
+                        <div className="flex items-center gap-2 mt-1">
+                            {isSaving ? (
+                                <>
+                                    <Loader2 className="w-3 h-3 text-indigo-400 animate-spin" />
+                                    <p className="text-xs font-medium text-indigo-400">
+                                        {language === 'fi' ? 'Tallennetaan...' : 'Saving...'}
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <Cloud className="w-3 h-3 text-emerald-500" />
+                                    <p className="text-xs font-medium text-slate-500">
+                                        {language === 'fi' ? 'Tallennettu pilveen' : 'Saved to cloud'}
+                                    </p>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -274,6 +264,34 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
                     {/* Based on user request order: TextSize, Color... */}
                     {!isSourceMode && editor && (
                         <>
+                            {/* Lists Dropdown */}
+                            <div className="relative" ref={listMenuRef}>
+                                <button
+                                    onClick={() => setShowListMenu(!showListMenu)}
+                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                    title={language === 'fi' ? "Listat" : "Lists"}
+                                >
+                                    <List className="w-5 h-5" />
+                                    <ChevronDown className="w-3 h-3" />
+                                </button>
+                                {showListMenu && (
+                                    <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col p-1">
+                                        <button
+                                            onClick={() => { editor.chain().focus().toggleBulletList().run(); setShowListMenu(false) }}
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('bulletList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
+                                        >
+                                            <List className="w-4 h-4" /> {language === 'fi' ? 'Luettelomerkit' : 'Bullet List'}
+                                        </button>
+                                        <button
+                                            onClick={() => { editor.chain().focus().toggleOrderedList().run(); setShowListMenu(false) }}
+                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('orderedList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
+                                        >
+                                            <ListOrdered className="w-4 h-4" /> {language === 'fi' ? 'Numeroitu lista' : 'Ordered List'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Header Dropdown */}
                             <div className="relative" ref={headerMenuRef}>
                                 <button
@@ -286,6 +304,9 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
                                 </button>
                                 {showHeaderMenu && (
                                     <div className="absolute top-full left-0 mt-2 w-40 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50 flex flex-col p-1">
+                                        <button onClick={() => { editor.chain().focus().setParagraph().run(); setShowHeaderMenu(false) }} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
+                                            <Pilcrow className="w-4 h-4" /> {language === 'fi' ? 'Perusteksti' : 'Normal Text'}
+                                        </button>
                                         <button onClick={() => toggleHeader(1)} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
                                             <Heading1 className="w-4 h-4" /> Heading 1
                                         </button>
@@ -324,25 +345,23 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
                                             ))}
                                         </div>
                                         <div className="border-t border-slate-800 pt-2">
-                                            <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer hover:text-white">
-                                                <div className="relative">
+                                            <label className="flex items-center gap-2 text-sm text-slate-400 cursor-pointer hover:text-white w-full p-1 rounded hover:bg-slate-800 transition-colors">
+                                                <div className="relative shrink-0">
                                                     <input
                                                         type="color"
                                                         value={customColor}
-                                                        onChange={(e) => setCustomColor(e.target.value)}
-                                                        className="w-8 h-8 rounded cursor-pointer opacity-0 absolute inset-0"
+                                                        onChange={(e) => {
+                                                            const c = e.target.value
+                                                            setCustomColor(c)
+                                                            applyColor(c) // Auto-apply
+                                                        }}
+                                                        className="w-8 h-8 rounded cursor-pointer opacity-0 absolute inset-0 z-10"
                                                     />
                                                     <div className="w-8 h-8 rounded bg-gradient-to-br from-indigo-500 to-rose-500 flex items-center justify-center pointer-events-none">
                                                         <PenTool className="w-4 h-4 text-white" />
                                                     </div>
                                                 </div>
-                                                <span>{language === 'fi' ? 'Valitse oma...' : 'Pick Custom...'}</span>
-                                                <button
-                                                    onClick={() => applyColor(customColor)}
-                                                    className="ml-auto text-xs bg-slate-800 px-2 py-1 rounded hover:bg-slate-700"
-                                                >
-                                                    {language === 'fi' ? 'Valitse' : 'Apply'}
-                                                </button>
+                                                <span>{language === 'fi' ? 'Valitse oma väri...' : 'Pick Custom Color...'}</span>
                                             </label>
                                         </div>
                                     </div>
@@ -395,6 +414,31 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
                         )}
                     </div>
 
+                    <div className="w-px h-6 bg-slate-800 mx-1"></div>
+
+                    {/* Indent / Outdent */}
+                    {!isSourceMode && editor && (
+                        <>
+                            <button
+                                onClick={() => editor.chain().focus().liftListItem('listItem').run()}
+                                disabled={!editor.can().liftListItem('listItem')}
+                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-30"
+                                title={language === 'fi' ? "Vähennä sisennystä" : "Decrease Indent"}
+                            >
+                                <Outdent className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={() => editor.chain().focus().sinkListItem('listItem').run()}
+                                disabled={!editor.can().sinkListItem('listItem')}
+                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-30"
+                                title={language === 'fi' ? "Lisää sisennystä" : "Increase Indent"}
+                            >
+                                <Indent className="w-5 h-5" />
+                            </button>
+                            <div className="w-px h-6 bg-slate-800 mx-1"></div>
+                        </>
+                    )}
+
                     {/* HTML/Source Toggle */}
                     <button
                         onClick={() => {
@@ -441,7 +485,7 @@ export function NoteEditor({ onLogout, isSidebarOpen }) {
 
             {/* Editor Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar">
-                <div className="max-w-4xl mx-auto w-full py-12 px-8 min-h-full">
+                <div className={`max-w-4xl w-full py-12 min-h-full transition-all duration-300 ${!isSidebarOpen ? 'pl-[104px] pr-8' : 'px-8'}`}>
                     {isSourceMode ? (
                         <div className="relative font-mono">
                             <div className="absolute -top-6 right-0 text-xs text-slate-500 font-sans">{language === 'fi' ? 'HTML-lähdekoodi' : 'HTML Source Mode'}</div>

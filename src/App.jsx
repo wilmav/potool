@@ -137,7 +137,7 @@ function App() {
             {/* Sidebar with Bullet Library - Darker Panel */}
             <aside
                 ref={sidebarRef}
-                className={`border-r border-slate-800 bg-slate-900/50 backdrop-blur-xl flex flex-col shadow-2xl relative z-20 transition-all duration-300 ease-in-out ${isSidebarOpen ? '' : '-ml-[100%]'}`}
+                className={`border-r border-slate-800 bg-slate-900/50 backdrop-blur-xl flex flex-col shadow-2xl relative z-20 transition-all duration-300 ease-in-out`}
                 style={{ width: isSidebarOpen ? sidebarWidth : 0, opacity: isSidebarOpen ? 1 : 0, overflow: 'hidden' }}
             >
                 {/* Header */}
@@ -180,26 +180,14 @@ function App() {
                 </div>
             )}
 
-            {!isSidebarOpen && (
-                <div className="absolute left-6 top-6 z-40 flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-300">
-                    <button
-                        onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg text-indigo-400 hover:text-white shadow-lg hover:shadow-indigo-500/20 transition-all group"
-                        title={language === 'fi' ? "Avaa sivupalkki" : "Open Sidebar"}
-                    >
-                        <ChevronRight className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                    </button>
-                    <h1 className="font-bold text-xl flex items-center gap-2.5 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 drop-shadow-sm pointer-events-none select-none">
-                        <Layout className="w-6 h-6 text-indigo-400 shadow-indigo-500/50" />
-                        PO Tool
-                    </h1>
-                </div>
-            )}
-
-            {/* Main Content: Note Editor - Lighter Dark Panel */}
+            {/* Main Content */}
             <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/5 via-slate-950 to-slate-950 pointer-events-none" />
-                <NoteEditor onLogout={handleLogout} isSidebarOpen={isSidebarOpen} />
+                <NoteEditor
+                    onLogout={handleLogout}
+                    isSidebarOpen={isSidebarOpen}
+                    onOpenSidebar={() => setIsSidebarOpen(true)}
+                />
             </main>
         </div>
     )
