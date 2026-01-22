@@ -259,7 +259,7 @@ function BulletCard({ bullet, language, themeColor }) {
     const [showInfo, setShowInfo] = useState(false)
 
     const primaryText = language === 'fi' ? bullet.fi_text : bullet.en_text
-
+    const secondaryText = language === 'fi' ? bullet.en_text : bullet.fi_text
     const description = language === 'fi' ? bullet.fi_description : bullet.en_description
 
     return (
@@ -274,6 +274,9 @@ function BulletCard({ bullet, language, themeColor }) {
                     <div className="flex flex-col">
                         <span className={`font-medium text-sm break-words ${bullet.is_active ? 'text-indigo-300' : 'text-slate-300 group-hover:text-slate-200'}`} style={themeColor ? { color: themeColor } : {}}>
                             {primaryText}
+                        </span>
+                        <span className="text-xs text-slate-500 break-words group-hover:text-slate-400 transition-colors">
+                            {secondaryText}
                         </span>
                     </div>
                 </div>

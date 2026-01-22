@@ -283,7 +283,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             type="text"
                             value={noteTitle}
                             onChange={(e) => setNoteTitle(e.target.value)}
-                            placeholder="Untitled Plan"
+                            placeholder={language === 'fi' ? 'Nimetön suunnitelma' : 'Untitled Plan'}
                             className="text-2xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-slate-600 w-full text-slate-100"
                         />
                         <div className="flex items-center gap-2 mt-1">
