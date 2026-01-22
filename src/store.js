@@ -61,9 +61,19 @@ export const useStore = create(persist((set, get) => ({
     setNoteContent: (content) => set({ noteContent: content }),
     setNoteTitle: (title) => set({ noteTitle: title }),
 
-    addToNote: (text) => set((state) => ({
-        noteContent: state.noteContent + (state.noteContent ? '\n\n' : '') + `## ${text}\n`
+    categoryColors: {},
+    setCategoryColor: (topic, color) => set(state => ({
+        categoryColors: { ...state.categoryColors, [topic]: color }
     })),
+
+    addToNote: (text, type = 'h2', color = null) => set((state) => {
+        const innerContent = color ? `<span style="color: ${color}">${text}</span>` : text
+        const tag = type === 'h2' ? 'h2' : 'p'
+        const element = `<${tag}>${innerContent}</${tag}>`
+        return {
+            noteContent: state.noteContent + (state.noteContent ? '<p></p>' : '') + element + '<p></p>'
+        }
+    }),
 
     // Cloud Actions
     versions: [], // List of versions for active note

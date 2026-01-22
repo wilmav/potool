@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../store'
-import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code } from 'lucide-react'
 
 export function Sidebar() {
     const {
@@ -12,6 +12,10 @@ export function Sidebar() {
     const [view, setView] = useState('library') // 'library' | 'plans'
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedThemes, setExpandedThemes] = useState(new Set(['Discovery', 'Riskit', 'Ideointi', 'Määrittely']))
+    const { categoryColors, setCategoryColor } = useStore() // Use categoryColors from store
+    const [colorPickerOpen, setColorPickerOpen] = useState(null) // theme name
+
+    const availableColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ffffff']
 
     // Load notes on mount
     useEffect(() => {
@@ -143,6 +147,36 @@ export function Sidebar() {
                                                         <span>{hiddenCount}</span>
                                                     </button>
                                                 )}
+
+                                                {/* Color Picker Trigger */}
+                                                <div className="relative ml-2">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            setColorPickerOpen(colorPickerOpen === theme ? null : theme)
+                                                        }}
+                                                        className="w-4 h-4 rounded-full border border-slate-600 hover:scale-110 transition-transform"
+                                                        style={{ backgroundColor: categoryColors[theme] || '#334155' }}
+                                                        title="Category Color"
+                                                    />
+
+                                                    {colorPickerOpen === theme && (
+                                                        <div className="absolute top-full right-0 mt-2 p-2 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 flex gap-1 animate-in fade-in zoom-in duration-200">
+                                                            {availableColors.map(c => (
+                                                                <button
+                                                                    key={c}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation()
+                                                                        setCategoryColor(theme, c)
+                                                                        setColorPickerOpen(null)
+                                                                    }}
+                                                                    className="w-5 h-5 rounded-full border border-slate-600 hover:scale-110 transition-transform"
+                                                                    style={{ backgroundColor: c }}
+                                                                />
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
 
                                             {expandedThemes.has(theme) && (
@@ -152,7 +186,7 @@ export function Sidebar() {
                                                         const textB = language === 'fi' ? b.fi_text : b.en_text
                                                         return textA.localeCompare(textB)
                                                     }).map(bullet => (
-                                                        <BulletCard key={bullet.id} bullet={bullet} language={language} />
+                                                        <BulletCard key={bullet.id} bullet={bullet} language={language} themeColor={categoryColors[theme]} />
                                                     ))}
                                                 </div>
                                             )}
@@ -220,7 +254,7 @@ export function Sidebar() {
     )
 }
 
-function BulletCard({ bullet, language }) {
+function BulletCard({ bullet, language, themeColor }) {
     const { toggleBulletActive, hideBullet, addToNote } = useStore()
     const [showInfo, setShowInfo] = useState(false)
 
@@ -238,10 +272,10 @@ function BulletCard({ bullet, language }) {
             <div className="group flex items-start justify-between p-2.5">
                 <div className="flex-1 mr-2 min-w-0 pointer-events-none">
                     <div className="flex flex-col">
-                        <span className={`font-medium text-sm truncate ${bullet.is_active ? 'text-indigo-300' : 'text-slate-300 group-hover:text-slate-200'}`}>
+                        <span className={`font-medium text-sm break-words ${bullet.is_active ? 'text-indigo-300' : 'text-slate-300 group-hover:text-slate-200'}`} style={themeColor ? { color: themeColor } : {}}>
                             {primaryText}
                         </span>
-                        <span className="text-xs text-slate-500 truncate group-hover:text-slate-400 transition-colors">
+                        <span className="text-xs text-slate-500 break-words group-hover:text-slate-400 transition-colors">
                             {secondaryText}
                         </span>
                     </div>
@@ -270,9 +304,16 @@ function BulletCard({ bullet, language }) {
                         <EyeOff className="w-3.5 h-3.5" />
                     </button>
                     <ActionBtn
-                        onClick={() => addToNote(primaryText)}
+                        onClick={() => addToNote(primaryText, 'p', themeColor)}
+                        icon={Code}
+                        label={language === 'fi' ? "Lisää leipätekstinä" : "Add as Body"}
+                        extraClass="hover:text-sky-300"
+                    />
+                    <ActionBtn
+                        onClick={() => addToNote(primaryText, 'h2', themeColor)}
                         icon={Plus}
-                        label={language === 'fi' ? "Lisää" : "Add"}
+                        label={language === 'fi' ? "Lisää otsikkona" : "Add as Header"}
+                        extraClass="text-indigo-400 hover:text-indigo-300 hover:bg-slate-700"
                     />
                 </div>
             </div>

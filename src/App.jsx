@@ -8,17 +8,20 @@ import { LandingPage } from './components/LandingPage'
 import { Layout, Globe, LogOut, Sparkles, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react'
 
 function App() {
-    const { language, setLanguage, user, setUser, fetchBullets, activeNoteId, saveNote } = useStore() // Added activeNoteId, saveNote
+    const { language, setLanguage, user, setUser, fetchBullets, activeNoteId, saveNote } = useStore()
+    const [loadingAuth, setLoadingAuth] = useState(true)
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null)
             if (session?.user) fetchBullets()
+            setLoadingAuth(false)
         })
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null)
             if (session?.user) fetchBullets()
+            setLoadingAuth(false)
         })
 
         return () => subscription.unsubscribe()
@@ -65,6 +68,10 @@ function App() {
             window.removeEventListener("mouseup", stopResizing)
         }
     }, [isResizing])
+
+    if (loadingAuth) {
+        return <div className="h-screen w-screen bg-slate-950 flex items-center justify-center text-slate-500">Loading...</div>
+    }
 
     if (!user) {
         if (view === 'login') {
@@ -141,12 +148,6 @@ function App() {
                     </h1>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={() => setIsSidebarOpen(false)}
-                            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg lg:hidden"
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </button>
-                        <button
                             onClick={() => setLanguage(language === 'fi' ? 'en' : 'fi')}
                             className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700/80 border border-slate-700 rounded-lg text-xs font-semibold tracking-wide transition-all text-slate-300 hover:text-white"
                         >
@@ -154,11 +155,11 @@ function App() {
                             {language.toUpperCase()}
                         </button>
                         <button
-                            onClick={handleLogout}
-                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-all"
-                            title={language === 'fi' ? 'Kirjaudu ulos' : 'Log out'}
+                            onClick={() => setIsSidebarOpen(false)}
+                            className="p-1.5 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg"
+                            title={language === 'fi' ? "Sulje sivupalkki" : "Close Sidebar"}
                         >
-                            <LogOut className="w-4 h-4" />
+                            <ChevronLeft className="w-4 h-4" />
                         </button>
                     </div>
                 </div>
@@ -180,21 +181,25 @@ function App() {
             )}
 
             {!isSidebarOpen && (
-                <div className="absolute left-4 top-4 z-40">
+                <div className="absolute left-6 top-6 z-40 flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-300">
                     <button
                         onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 bg-slate-800/80 backdrop-blur-md border border-slate-700 rounded-lg text-slate-400 hover:text-white shadow-lg hover:shadow-indigo-500/20 transition-all font-bold"
-                        title="Open Sidebar"
+                        className="p-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg text-indigo-400 hover:text-white shadow-lg hover:shadow-indigo-500/20 transition-all group"
+                        title={language === 'fi' ? "Avaa sivupalkki" : "Open Sidebar"}
                     >
-                        <Layout className="w-5 h-5" />
+                        <ChevronRight className="w-5 h-5 group-hover:scale-110 transition-transform" />
                     </button>
+                    <h1 className="font-bold text-xl flex items-center gap-2.5 text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 drop-shadow-sm pointer-events-none select-none">
+                        <Layout className="w-6 h-6 text-indigo-400 shadow-indigo-500/50" />
+                        PO Tool
+                    </h1>
                 </div>
             )}
 
             {/* Main Content: Note Editor - Lighter Dark Panel */}
             <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/5 via-slate-950 to-slate-950 pointer-events-none" />
-                <NoteEditor />
+                <NoteEditor onLogout={handleLogout} isSidebarOpen={isSidebarOpen} />
             </main>
         </div>
     )
