@@ -31,8 +31,10 @@ export function Auth({ onBack }) {
 
         // 2. Allowlist Check for Magic Link
         const ALLOWED_EMAILS = [
-            'wilma.vertaiskuntoutus@gmail.com', // Replace/Add your email
-            'guest@potool.com'
+            'wilma.vertaiskuntoutus@gmail.com',
+            'guest@potool.com',
+            'iao@iki.fi',
+            'orangelemon@live.com'
         ]
 
         if (!ALLOWED_EMAILS.includes(email.trim().toLowerCase())) {
