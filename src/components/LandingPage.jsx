@@ -1,4 +1,4 @@
-import { Layout, Globe, ArrowRight, Check, Sparkles, Cloud, Languages, Lock, Zap } from 'lucide-react'
+import { Layout, Globe, Check, Sparkles, Cloud, Languages, Lock, Zap } from 'lucide-react'
 import { useStore } from '../store'
 
 export function LandingPage({ onLogin }) {
@@ -6,11 +6,10 @@ export function LandingPage({ onLogin }) {
 
     const t = {
         hero: {
-            title: language === 'fi' ? 'Mestarillista tuotehallintaa' : 'Master Your Product Specs',
+            title: language === 'fi' ? 'Kaksikielinen, tekoälyavusteinen työkalu moderneille tuoteomistajille.' : 'The bilingual, AI-powered workspace for modern Product Owners.',
             subtitle: language === 'fi'
-                ? 'Kaksikielinen, tekoälyavusteinen työkalu moderneille tuoteomistajille.'
-                : 'The bilingual, AI-powered workspace for modern Product Owners.',
-            cta: language === 'fi' ? 'Aloita ilmaiseksi' : 'Start for Free',
+                ? 'Keskeiset teemat tekevät valmistelusta selkeää ja johdonmukaista.'
+                : 'Key themes make preparation clear and consistent.',
             login: language === 'fi' ? 'Kirjaudu sisään' : 'Log in'
         },
         features: {
@@ -74,32 +73,20 @@ export function LandingPage({ onLogin }) {
                 </div>
 
                 <div className="relative max-w-7xl mx-auto px-6 text-center z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 mb-8 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold tracking-wide uppercase">
-                        <Sparkles className="w-3 h-3" />
-                        {language === 'fi' ? 'Uusi: Versiohistoria' : 'New: Version History'}
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full bg-slate-900 border border-indigo-500/30 shadow-[0_0_15px_-3px_rgba(99,102,241,0.3)] text-indigo-200 text-sm font-medium transition-transform hover:scale-105 cursor-default">
+                        <span>🔥</span>
+                        {language === 'fi' ? 'Uutta: Versiohistoria' : 'New: Version History'}
                     </div>
 
                     <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">
                         {t.hero.title}
-                        <br />
-                        <span className="text-indigo-400">
-                            {language === 'fi' ? 'ilman säätöä.' : 'without the hassle.'}
-                        </span>
                     </h1>
 
-                    <p className="max-w-2xl mx-auto text-lg lg:text-xl text-slate-400 mb-10 leading-relaxed">
+                    <p className="max-w-2xl mx-auto text-lg lg:text-xl text-indigo-400 mb-10 leading-relaxed">
                         {t.hero.subtitle}
                     </p>
 
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                        <button
-                            onClick={onLogin}
-                            className="w-full sm:w-auto px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-lg shadow-xl shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 group"
-                        >
-                            {t.hero.cta}
-                            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                        </button>
-                    </div>
+
 
                     {/* Dashboard Preview Mockup */}
                     <div className="mt-20 relative mx-auto max-w-5xl rounded-2xl border border-slate-800 bg-slate-900/50 backdrop-blur-sm shadow-2xl overflow-hidden group">
