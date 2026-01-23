@@ -59,12 +59,14 @@ export const useStore = create(persist((set, get) => ({
     // Note State
     noteContent: '',
     noteTitle: 'Untitled Plan',
+    noteSummary: '', // NEW: Summary field
     activeNoteId: null,
     notes: [], // List of available notes { id, title, updated_at ... }
     isSaving: false,
 
     setNoteContent: (content) => set({ noteContent: content }),
     setNoteTitle: (title) => set({ noteTitle: title }),
+    setNoteSummary: (summary) => set({ noteSummary: summary }), // NEW: Setter
 
     categoryColors: {},
     setCategoryColor: (topic, color) => {
@@ -131,6 +133,7 @@ export const useStore = create(persist((set, get) => ({
 
     // Cloud Actions
     versions: [], // List of versions for active note
+    sidebarVersions: {}, // Cache for sidebar expansion: { [noteId]: version[] }
     isManualSaving: false,
 
     fetchNotes: async () => {
@@ -203,6 +206,7 @@ export const useStore = create(persist((set, get) => ({
                 activeNoteId: data.id,
                 noteContent: data.content || '',
                 noteTitle: data.title,
+                noteSummary: data.summary || '', // NEW: Load summary
                 isSaving: false
             })
             get().fetchVersions(id)
@@ -212,7 +216,7 @@ export const useStore = create(persist((set, get) => ({
     },
 
     saveNote: async (isManual = false) => {
-        const { activeNoteId, noteContent, noteTitle, user } = get()
+        const { activeNoteId, noteContent, noteTitle, noteSummary, user } = get()
         if (!user) return
 
         set({ isSaving: true })
@@ -225,6 +229,7 @@ export const useStore = create(persist((set, get) => ({
                 .update({
                     content: noteContent,
                     title: noteTitle,
+                    summary: noteSummary, // NEW: Save summary
                     updated_at: new Date()
                 })
                 .eq('id', activeNoteId)
@@ -234,7 +239,7 @@ export const useStore = create(persist((set, get) => ({
                 set(state => ({
                     notes: state.notes.map(n =>
                         n.id === activeNoteId
-                            ? { ...n, title: noteTitle, updated_at: new Date() }
+                            ? { ...n, title: noteTitle, summary: noteSummary, updated_at: new Date() } // NEW: Update local list with summary
                             : n
                     ).sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at))
                 }))
@@ -246,7 +251,8 @@ export const useStore = create(persist((set, get) => ({
                         .insert({
                             note_id: activeNoteId,
                             title: noteTitle,
-                            content: noteContent
+                            content: noteContent,
+                            summary: noteSummary // NEW: Save summary to version
                         })
 
                     if (versionError) {
@@ -264,7 +270,8 @@ export const useStore = create(persist((set, get) => ({
                 .insert({
                     user_id: user.id,
                     title: noteTitle,
-                    content: noteContent
+                    content: noteContent,
+                    summary: noteSummary // NEW: Create with summary
                 })
                 .select()
                 .single()
@@ -281,7 +288,8 @@ export const useStore = create(persist((set, get) => ({
                         .insert({
                             note_id: data.id,
                             title: noteTitle,
-                            content: noteContent
+                            content: noteContent,
+                            summary: noteSummary // NEW: Save summary to version
                         })
 
                     if (versionError) {
@@ -308,16 +316,50 @@ export const useStore = create(persist((set, get) => ({
         if (data) set({ versions: data })
     },
 
+    fetchSidebarVersions: async (noteId) => {
+        const { sidebarVersions } = get()
+        // If already cached, don't refetch (unless we want to force refresh? For now cache is enough)
+        if (sidebarVersions[noteId]) return
+
+        const { data, error } = await supabase
+            .from('note_versions')
+            .select('*')
+            .eq('note_id', noteId)
+            .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error('Error fetching sidebar versions:', error)
+            return
+        }
+
+        if (data) {
+            set(state => ({
+                sidebarVersions: {
+                    ...state.sidebarVersions,
+                    [noteId]: data
+                }
+            }))
+        }
+    },
+
     versionTimestamp: null,
 
     restoreVersion: async (version) => {
         set({
             noteTitle: version.title,
             noteContent: version.content,
+            noteSummary: version.summary || '', // NEW: Restore summary
             versionTimestamp: Date.now()
         })
         // Immediately save as current draft
         await get().saveNote(true)
+    },
+
+    // NEW: Special action to update summary
+    updateQuickSummary: async (newSummary) => {
+        set({ noteSummary: newSummary })
+        // Trigger save to update main note
+        await get().saveNote()
     },
 
     // Translation State & Action
@@ -372,6 +414,7 @@ export const useStore = create(persist((set, get) => ({
     partialize: (state) => ({
         noteContent: state.noteContent,
         noteTitle: state.noteTitle,
+        noteSummary: state.noteSummary, // NEW: Persist summary
         activeNoteId: state.activeNoteId,
         categoryColors: state.categoryColors,
         language: state.language,

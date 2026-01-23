@@ -3,18 +3,20 @@ import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1
 import { jsPDF } from 'jspdf'
 import { useState, useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
+import { createPortal } from 'react-dom'
 import StarterKit from '@tiptap/starter-kit'
 import { Color } from '@tiptap/extension-color'
 import { TextStyle } from '@tiptap/extension-text-style'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Underline from '@tiptap/extension-underline'
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList } from 'lucide-react'
 
 export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const {
         noteContent, setNoteContent,
         noteTitle, setNoteTitle,
+        noteSummary, updateQuickSummary, // NEW: Store hooks
         language,
         translateNoteContent, isTranslating,
         saveNote, isSaving, createNote,
@@ -39,6 +41,28 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
 
     // Deletion confirmation state
     const [colorToDelete, setColorToDelete] = useState(null)
+
+    // Summary Popover State
+    const [showSummaryPopover, setShowSummaryPopover] = useState(false)
+    const showSummaryPopoverRef = useRef(false) // Track state for event listener
+    const [summaryDraft, setSummaryDraft] = useState('')
+    const summaryButtonRef = useRef(null)
+    const summaryPopoverRef = useRef(null)
+
+    useEffect(() => {
+        showSummaryPopoverRef.current = showSummaryPopover
+    }, [showSummaryPopover])
+
+    useEffect(() => {
+        if (showSummaryPopover) {
+            setSummaryDraft(noteSummary || '')
+        }
+    }, [showSummaryPopover, noteSummary])
+
+    const handleSummarySave = async () => {
+        await updateQuickSummary(summaryDraft)
+        setShowSummaryPopover(false)
+    }
 
     // Duplicate Title Warning
     const [duplicateWarning, setDuplicateWarning] = useState(null)
@@ -146,6 +170,11 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
             if (listMenuRef.current && !listMenuRef.current.contains(event.target)) {
                 setShowListMenu(false)
             }
+            if (colorMenuRef.current && !colorMenuRef.current.contains(event.target)) {
+                setShowColorMenu(false)
+            }
+            // Fix: Check if refs exist before checking contains.
+            // Also ensure we don't close if clicking the button itself.
             if (colorMenuRef.current && !colorMenuRef.current.contains(event.target)) {
                 setShowColorMenu(false)
             }
@@ -356,6 +385,70 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             )}
                         </div>
                     </div>
+                </div>
+
+                {/* Summary / Info Button */}
+                <div className="relative">
+                    <button
+                        ref={summaryButtonRef}
+                        onClick={() => setShowSummaryPopover(!showSummaryPopover)}
+                        className={`p-2 rounded-lg transition-colors ${showSummaryPopover ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-500 hover:text-indigo-300 hover:bg-slate-800'}`}
+                        title={language === 'fi' ? 'Suunnitelman tiedot & Tiivistelmä' : 'Plan Info & Summary'}
+                    >
+                        <ClipboardList className="w-5 h-5" />
+                    </button>
+
+                    {/* Summary Popover */}
+                    {showSummaryPopover && createPortal(
+                        <>
+                            {/* Backdrop for closing */}
+                            <div
+                                className="fixed inset-0 z-[9998] bg-black/50 backdrop-blur-[2px]"
+                                onClick={() => setShowSummaryPopover(false)}
+                            />
+                            <div
+                                ref={summaryPopoverRef}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-[9999] flex flex-col animate-in fade-in zoom-in duration-200"
+                            >
+                                <div className="flex items-center justify-between p-3 border-b border-slate-800 bg-slate-950/50 rounded-t-xl">
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                        {language === 'fi' ? 'Tiivistelmä' : 'Summary'}
+                                    </h3>
+                                    <button
+                                        onClick={() => setShowSummaryPopover(false)}
+                                        className="text-slate-500 hover:text-slate-300 transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                                <div className="p-4 space-y-4">
+                                    <textarea
+                                        value={summaryDraft}
+                                        onChange={(e) => setSummaryDraft(e.target.value)}
+                                        placeholder={language === 'fi' ? 'Kirjoita lyhyt tiivistelmä...' : 'Write a short summary...'}
+                                        className="w-full h-32 bg-slate-800/50 border border-slate-700 rounded-lg p-3 text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 outline-none resize-none"
+                                    />
+
+                                    <div className="flex gap-2 pt-2">
+                                        <button
+                                            onClick={() => setShowSummaryPopover(false)}
+                                            className="flex-1 px-3 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
+                                        >
+                                            {language === 'fi' ? 'Peruuta' : 'Cancel'}
+                                        </button>
+                                        <button
+                                            onClick={handleSummarySave}
+                                            className="flex-1 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg shadow-lg shadow-indigo-500/20 transition-all"
+                                        >
+                                            {language === 'fi' ? 'Tallenna' : 'Save'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </>,
+                        document.body
+                    )}
                 </div>
 
                 <div className="flex items-center gap-1">
@@ -732,10 +825,10 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         </button>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Editor Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
+            < div className="flex-1 overflow-y-auto custom-scrollbar" >
                 <div className={`max-w-4xl w-full py-12 min-h-full transition-all duration-300 ${!isSidebarOpen ? 'pl-[104px] pr-8' : 'px-8'}`}>
                     {isSourceMode ? (
                         <div className="relative font-mono">
@@ -751,7 +844,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         <EditorContent editor={editor} />
                     )}
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     )
 }

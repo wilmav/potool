@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore } from '../store'
 import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code } from 'lucide-react'
 
@@ -6,16 +7,43 @@ export function Sidebar() {
     const {
         language, bullets, loadingBullets,
         toggleBulletActive, hideBullet, unhideBullet, addToNote,
-        notes, fetchNotes, loadNote, createNote, activeNoteId
+        notes, fetchNotes, loadNote, createNote, activeNoteId,
+        sidebarVersions, fetchSidebarVersions, restoreVersion
     } = useStore()
+
+    const [expandedNoteIds, setExpandedNoteIds] = useState(new Set())
+
+    const toggleNoteExpansion = async (e, noteId) => {
+        e.stopPropagation()
+        const newSet = new Set(expandedNoteIds)
+        if (newSet.has(noteId)) {
+            newSet.delete(noteId)
+        } else {
+            newSet.add(noteId)
+            await fetchSidebarVersions(noteId)
+        }
+        setExpandedNoteIds(newSet)
+    }
 
     const [view, setView] = useState('library') // 'library' | 'plans'
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedThemes, setExpandedThemes] = useState(new Set(['Discovery', 'Riskit', 'Ideointi', 'Määrittely']))
+
     const { categoryColors, setCategoryColor, recentColors } = useStore() // Use categoryColors from store
     const [colorPickerOpen, setColorPickerOpen] = useState(null) // theme name
 
-    // const availableColors = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#8b5cf6', '#ffffff']
+    // Tooltip State for Portal
+    const [activeTooltip, setActiveTooltip] = useState(null) // { content: string, rect: DOMRect }
+
+    const handleTooltipEnter = (e, content) => {
+        if (!content) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        setActiveTooltip({ content, rect })
+    }
+
+    const handleTooltipLeave = () => {
+        setActiveTooltip(null)
+    }
 
     // Load notes on mount
     useEffect(() => {
@@ -205,7 +233,7 @@ export function Sidebar() {
                             className="w-full flex items-center justify-center gap-2 py-3 mb-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98]"
                         >
                             <Plus className="w-5 h-5" />
-                            {language === 'fi' ? 'Uusi suunnitelma' : 'New Plan'}
+                            <span>{language === 'fi' ? 'Uusi suunnitelma' : 'New Plan'}</span>
                         </button>
 
                         <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -215,38 +243,112 @@ export function Sidebar() {
                                 </div>
                             ) : (
                                 notes.map(note => (
-                                    <button
+                                    <div
                                         key={note.id}
-                                        onClick={() => loadNote(note.id)}
-                                        className={`w-full p-4 rounded-xl border text-left transition-all group ${activeNoteId === note.id
+                                        className={`w-full rounded-xl border text-left transition-all group relative ${activeNoteId === note.id
                                             ? 'bg-indigo-900/20 border-indigo-500/50 shadow-md ring-1 ring-indigo-500/30'
                                             : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800 hover:border-slate-600'
                                             }`}
                                     >
-                                        <div className="flex items-center justify-between min-w-0">
-                                            <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                <div className={`p-2 rounded-lg shrink-0 ${activeNoteId === note.id ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
-                                                    <FileText className="w-5 h-5" />
+                                        <button
+                                            onClick={() => loadNote(note.id)}
+                                            className="w-full text-left p-4"
+                                        >
+                                            <div className="flex items-center justify-between min-w-0 relative group/item pr-6">
+                                                <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                    <div className={`p-2 rounded-lg shrink-0 ${activeNoteId === note.id ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
+                                                        <FileText className="w-5 h-5" />
+                                                    </div>
+                                                    <div className="min-w-0 flex-1 text-left">
+                                                        <h3 className={`font-semibold text-sm truncate pr-2 ${activeNoteId === note.id ? 'text-indigo-100' : 'text-slate-200 group-hover:text-white'}`}>
+                                                            {note.title || (language === 'fi' ? 'Nimetön' : 'Untitled')}
+                                                        </h3>
+                                                        <span className="text-xs text-slate-500 truncate block">
+                                                            {new Date(note.updated_at).toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-US', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} {new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <h3 className={`font-semibold text-sm truncate pr-2 ${activeNoteId === note.id ? 'text-indigo-100' : 'text-slate-200 group-hover:text-white'}`}>
-                                                        {note.title || (language === 'fi' ? 'Nimetön' : 'Untitled')}
-                                                    </h3>
-                                                    <span className="text-xs text-slate-500 truncate block">
-                                                        {new Date(note.updated_at).toLocaleDateString()} {new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
+                                                {/* Accordion Toggle - Moved inside flex for better positioning */}
+                                                <div
+                                                    onClick={(e) => toggleNoteExpansion(e, note.id)}
+                                                    className="flex items-center justify-center p-2 rounded hover:bg-slate-700/50 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer z-30"
+                                                >
+                                                    <ChevronRight className={`w-4 h-4 transform transition-transform duration-200 ${expandedNoteIds.has(note.id) ? 'rotate-90' : ''}`} />
+                                                </div>
+
+                                                {/* Summary Tooltip Trigger */}
+                                                {/* Summary Tooltip Trigger */}
+                                                {note.summary && (
+                                                    <div
+                                                        className="absolute inset-0 z-20"
+                                                        onMouseEnter={(e) => handleTooltipEnter(e, note.summary)}
+                                                        onMouseLeave={handleTooltipLeave}
+                                                    />
+                                                )}
+                                            </div>
+                                        </button>
+
+                                        {/* Versions Nested List */}
+                                        {expandedNoteIds.has(note.id) && sidebarVersions[note.id] && (
+                                            <div onClick={(e) => e.stopPropagation()} className="px-4 pb-4">
+                                                <div className="pt-2 border-t border-slate-700/50 space-y-1 animate-in slide-in-from-top-2 duration-200">
+                                                    {sidebarVersions[note.id].length === 0 && (
+                                                        <div className="text-[10px] text-slate-600 py-1 text-center">
+                                                            {language === 'fi' ? 'Ei versioita' : 'No versions'}
+                                                        </div>
+                                                    )}
+                                                    {sidebarVersions[note.id].map(version => (
+                                                        <div
+                                                            key={version.id}
+                                                            className="relative group/version"
+                                                        >
+                                                            <button
+                                                                onClick={() => restoreVersion(version)}
+                                                                className="w-full text-left p-2 rounded hover:bg-slate-700/50 text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center justify-between"
+                                                            >
+                                                                <span>
+                                                                    {new Date(version.created_at).toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-US', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} {new Date(version.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                                </span>
+                                                                {version.summary && (
+                                                                    <Info className="w-3 h-3 text-slate-600 group-hover/version:text-indigo-400" />
+                                                                )}
+                                                            </button>
+                                                            {/* Version Tooltip Trigger */}
+                                                            {version.summary && (
+                                                                <div
+                                                                    className="absolute inset-0 z-20"
+                                                                    onMouseEnter={(e) => handleTooltipEnter(e, version.summary)}
+                                                                    onMouseLeave={handleTooltipLeave}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                            {activeNoteId === note.id && (
-                                                <div className="text-indigo-400 bg-indigo-500/10 p-1.5 rounded-full">
-                                                    <Check className="w-3 h-3" />
-                                                </div>
-                                            )}
-                                        </div>
-                                    </button>
+                                        )}
+                                    </div>
                                 ))
                             )}
                         </div>
+
+                        {/* Portal Tooltip */}
+                        {activeTooltip && createPortal(
+                            <div
+                                className="fixed z-[9999] w-64 bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-xl pointer-events-none animate-in fade-in zoom-in duration-200"
+                                style={{
+                                    top: activeTooltip.rect.top,
+                                    left: activeTooltip.rect.right + 12, // 12px offset
+                                }}
+                            >
+                                <div className="text-[10px] uppercase font-bold text-slate-500 mb-1">{language === 'fi' ? 'Tiivistelmä' : 'Summary'}</div>
+                                <p className="text-xs text-slate-300 leading-relaxed line-clamp-6">
+                                    {activeTooltip.content}
+                                </p>
+                                {/* Arrow pointing left */}
+                                <div className="absolute top-4 -left-1.5 w-3 h-3 bg-slate-900 border-l border-b border-slate-700 transform rotate-45"></div>
+                            </div>,
+                            document.body
+                        )}
                     </div>
                 )}
             </div>
