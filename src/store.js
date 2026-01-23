@@ -551,16 +551,64 @@ export const useStore = create(persist((set, get) => ({
         } finally {
             set({ isTranslating: false })
         }
+    },
+    // Dashboard State
+    dashboards: [],
+    loadingDashboards: false,
+    activeDashboardId: null,
+    dashboardTabs: [], // Tabs for the active dashboard (with nested widgets)
+
+    fetchDashboards: async () => {
+        set({ loadingDashboards: true })
+        try {
+            // Lazy import to avoid circular dep issues if any, though service is clean
+            const { DashboardService } = await import('./services/dashboardService')
+            const data = await DashboardService.getDashboards()
+            set({ dashboards: data || [] })
+        } catch (err) {
+            console.error('Error fetching dashboards:', err)
+        }
+        set({ loadingDashboards: false })
+    },
+
+    loadDashboard: async (dashboardId) => {
+        set({ activeDashboardId: dashboardId, loadingDashboards: true })
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            const tabs = await DashboardService.getDashboardDetails(dashboardId)
+            set({ dashboardTabs: tabs || [] })
+        } catch (err) {
+            console.error('Error loading dashboard details:', err)
+        }
+        set({ loadingDashboards: false })
+    },
+
+    createDashboard: async (title) => {
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            const newDash = await DashboardService.createDashboard(title)
+            set(state => ({
+                dashboards: [newDash, ...state.dashboards],
+                activeDashboardId: newDash.id
+            }))
+            // Create default tab?
+            await DashboardService.createTab(newDash.id, 'My Workspace', 0, '#60a5fa')
+            get().loadDashboard(newDash.id)
+        } catch (err) {
+            console.error('Error creating dashboard:', err)
+        }
     }
+
 }), {
     name: 'potool-storage',
     partialize: (state) => ({
         noteContent: state.noteContent,
         noteTitle: state.noteTitle,
-        noteSummary: state.noteSummary, // NEW: Persist summary
+        noteSummary: state.noteSummary,
         activeNoteId: state.activeNoteId,
         categoryColors: state.categoryColors,
         language: state.language,
-        recentColors: state.recentColors
+        recentColors: state.recentColors,
+        activeDashboardId: state.activeDashboardId // Persist active dashboard
     }),
 }))

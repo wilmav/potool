@@ -5,9 +5,20 @@ import { Sidebar } from './components/Sidebar'
 import { NoteEditor } from './components/NoteEditor'
 import { Auth } from './components/Auth'
 import { LandingPage } from './components/LandingPage'
+import { DashboardPage } from './components/dashboard/DashboardPage'
+import DashboardPlaceholder from './components/dashboard/DashboardPlaceholder'
 import { Layout, Globe, LogOut, Sparkles, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react'
 
 function App() {
+    // Prototype Route
+    if (window.location.pathname === '/dashboard-demo') {
+        return <DashboardPlaceholder />
+    }
+    // Real Dashboard Route
+    if (window.location.pathname === '/dashboard') {
+        return <DashboardPage />
+    }
+
     const { language, setLanguage, user, setUser, fetchBullets, activeNoteId, saveNote } = useStore()
     const [loadingAuth, setLoadingAuth] = useState(true)
 
