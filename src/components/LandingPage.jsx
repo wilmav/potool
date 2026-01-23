@@ -28,7 +28,7 @@ export function LandingPage({ onLogin }) {
             templates: {
                 title: language === 'fi' ? 'Valmiit pohjat' : 'Smart Templates',
                 desc: language === 'fi'
-                    ? 'Kapsennettu kirjasto yleisimmille PO-termeille ja lauserakenteille.'
+                    ? 'Kattava kirjasto yleisimmille PO-termeille ja hyödyllisille ilmauksille.'
                     : 'Curated library of common PO terms and sentence structures widely used in the industry.'
             }
         }

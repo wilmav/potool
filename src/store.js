@@ -597,6 +597,65 @@ export const useStore = create(persist((set, get) => ({
         } catch (err) {
             console.error('Error creating dashboard:', err)
         }
+    },
+
+    addWidget: async (type, config = {}) => {
+        const { activeDashboardId, dashboardTabs, activeTabId } = get()
+        // If no active tab, try to find the first one or return
+        let targetTabId = activeTabId
+        if (!targetTabId && dashboardTabs.length > 0) {
+            targetTabId = dashboardTabs[0].id
+        }
+        if (!targetTabId) return
+
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            // Default layout
+            const layout = { x: 0, y: 0, w: 2, h: 2 } // Responsive grid handles placement usually, but we set default size
+
+            const newWidget = await DashboardService.createWidget(targetTabId, type, layout, config)
+
+            // Optimistic update
+            set(state => ({
+                dashboardTabs: state.dashboardTabs.map(tab =>
+                    tab.id === targetTabId
+                        ? { ...tab, widgets: [...(tab.widgets || []), newWidget] }
+                        : tab
+                )
+            }))
+        } catch (err) {
+            console.error('Error creating widget:', err)
+        }
+    },
+
+    updateDashboardLayout: async (layoutUpdates) => {
+        // layoutUpdates: { [widgetId]: { x, y, w, h } }
+        const { dashboardTabs, activeTabId } = get()
+
+        // 1. Optimistic Update
+        const newTabs = dashboardTabs.map(tab => {
+            if (tab.id !== activeTabId) return tab
+            return {
+                ...tab,
+                widgets: tab.widgets.map(w => {
+                    if (layoutUpdates[w.id]) {
+                        return { ...w, layout: { ...w.layout, ...layoutUpdates[w.id] } }
+                    }
+                    return w
+                })
+            }
+        })
+        set({ dashboardTabs: newTabs })
+
+        // 2. Persist to DB
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            const updatesArray = Object.entries(layoutUpdates).map(([id, layout]) => ({ id, layout }))
+            await DashboardService.updateWidgetsLayout(updatesArray)
+        } catch (err) {
+            console.error('Failed to save layout:', err)
+            // Revert? For now, we just log.
+        }
     }
 
 }), {

@@ -17,6 +17,7 @@ function App() {
     // Real Dashboard Route
     if (window.location.pathname === '/dashboard') {
         return <DashboardPage />
+        // return <div className="p-10 text-white">Dashboard Temporarily Disabled for Debugging</div>
     }
 
     const { language, setLanguage, user, setUser, fetchBullets, activeNoteId, saveNote } = useStore()

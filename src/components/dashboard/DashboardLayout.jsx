@@ -43,8 +43,15 @@ export const DashboardLayout = ({ children }) => {
         dashboardTabs,
         fetchDashboards,
         createDashboard,
-        loadDashboard
+        loadDashboard,
+        addWidget
     } = useStore()
+
+    console.log('DashboardLayout rendered', {
+        dashboardsCount: dashboards.length,
+        activeDashboardId,
+        dashboardTabsCount: dashboardTabs.length
+    })
 
     const [activeTabId, setActiveTabId] = useState(null)
 
@@ -73,6 +80,13 @@ export const DashboardLayout = ({ children }) => {
         const title = prompt("Anna uudelle dashboardille nimi:")
         if (title) {
             await createDashboard(title)
+        }
+    }
+
+    const handleAddWidget = async () => {
+        const type = prompt("Lisää widget (notes, stats, calendar):", "notes")
+        if (type) {
+            await addWidget(type.toLowerCase())
         }
     }
 
@@ -149,7 +163,10 @@ export const DashboardLayout = ({ children }) => {
                                 <button className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-bold transition-all border border-slate-700/50 flex gap-2 items-center hover:shadow-lg active:scale-95 text-slate-300">
                                     <Presentation size={18} /> Present
                                 </button>
-                                <button className="px-5 py-2.5 bg-white text-black hover:bg-slate-200 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all hover:-translate-y-1 active:translate-y-0 active:scale-95">
+                                <button
+                                    onClick={handleAddWidget}
+                                    className="px-5 py-2.5 bg-white text-black hover:bg-slate-200 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all hover:-translate-y-1 active:translate-y-0 active:scale-95"
+                                >
                                     + Add Widget
                                 </button>
                             </div>

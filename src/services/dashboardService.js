@@ -76,5 +76,30 @@ export const DashboardService = {
 
         if (error) throw error
         return data
+    },
+
+    async updateWidgetsLayout(updates) {
+        // updates: { id: string, layout: object }[]
+        // Supabase doesn't support bulk update with different values easily in client-js
+        // We'll use upsert if we have enough data, or just loop updates.
+        // Looping is fine for small number of widgets (<50)
+
+        // Optimistic approach: we don't wait for response for each
+        const promises = updates.map(update =>
+            supabase
+                .from('widgets')
+                .update({ layout: update.layout })
+                .eq('id', update.id)
+        )
+
+        const results = await Promise.all(promises)
+        const errors = results.filter(r => r.error).map(r => r.error)
+
+        if (errors.length > 0) {
+            console.error('Errors updating layouts:', errors)
+            throw errors[0]
+        }
+
+        return true
     }
 }
