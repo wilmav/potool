@@ -30,7 +30,7 @@ const DashboardContent = ({ activeTabId }) => {
                     </div>
                 ))
             ) : (
-                <div className="col-span-4 flex items-center justify-center h-40 bg-slate-900/50 rounded-3xl border border-dashed border-slate-800 text-slate-500">
+                <div className="col-span-4 flex items-center justify-center h-40 bg-slate-900/80 rounded-3xl border border-dashed border-slate-700 text-slate-200 text-lg font-medium">
                     {activeTab.title} is empty. Add a widget!
                 </div>
             )}

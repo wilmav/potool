@@ -139,7 +139,7 @@ export const DashboardLayout = ({ children }) => {
                                     <h1 className="text-4xl font-bold tracking-tight text-white">
                                         {currentTab ? currentTab.title : currentDashboard.title}
                                     </h1>
-                                    <p className="text-slate-500 mt-1 text-sm font-medium">
+                                    <p className="text-slate-300 mt-1 text-sm font-medium">
                                         {currentDashboard.title} • Updated just now
                                     </p>
                                 </div>
@@ -159,22 +159,26 @@ export const DashboardLayout = ({ children }) => {
                         <div className="min-h-[400px]">
                             {/* Pass activeTabId effectively to the child content */}
                             {children ? React.cloneElement(children, { activeTabId }) : (
-                                <div className="flex items-center justify-center h-64 border-2 border-dashed border-slate-800 rounded-3xl text-slate-600">
+                                <div className="flex items-center justify-center h-64 border-2 border-dashed border-slate-700 rounded-3xl text-slate-200 bg-slate-900/50">
                                     No widgets configured yet.
                                 </div>
                             )}
                         </div>
                     </div>
                 ) : (
-                    <div className="flex items-center justify-center h-full text-slate-500">
-                        <div className="text-center">
-                            <h2 className="text-xl font-semibold mb-2">Welcome to Dashboard</h2>
-                            <p className="mb-4">Create your first dashboard to get started.</p>
+                    <div className="flex items-center justify-center h-full text-slate-300">
+                        <div className="text-center p-8 bg-slate-900/50 rounded-3xl border border-slate-700/50 backdrop-blur-sm">
+                            <h2 className="text-3xl font-bold mb-4 text-white !text-white drop-shadow-md">
+                                Welcome to Dashboard (Live)
+                            </h2>
+                            <p className="mb-8 text-slate-100 max-w-md mx-auto leading-relaxed font-medium">
+                                Create your first workspace to start organizing your plans, notes, and team updates in one view.
+                            </p>
                             <button
                                 onClick={handleCreateDashboard}
-                                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-colors"
+                                className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-full font-bold transition-all shadow-lg shadow-indigo-500/25 hover:scale-105 active:scale-95"
                             >
-                                Create Dashboard
+                                + Create New Dashboard
                             </button>
                         </div>
                     </div>
