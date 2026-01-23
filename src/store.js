@@ -308,10 +308,13 @@ export const useStore = create(persist((set, get) => ({
         if (data) set({ versions: data })
     },
 
+    versionTimestamp: null,
+
     restoreVersion: async (version) => {
         set({
             noteTitle: version.title,
-            noteContent: version.content
+            noteContent: version.content,
+            versionTimestamp: Date.now()
         })
         // Immediately save as current draft
         await get().saveNote(true)

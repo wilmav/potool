@@ -20,7 +20,8 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         saveNote, isSaving, createNote,
         isManualSaving,
         recentColors, addRecentColor, removeRecentColor,
-        notes, activeNoteId // Get list of notes for duplicate checking
+        notes, activeNoteId, // Get list of notes for duplicate checking
+        versions, restoreVersion, versionTimestamp // Version History logic
     } = useStore()
 
     const [showExportMenu, setShowExportMenu] = useState(false)
@@ -107,16 +108,15 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     useEffect(() => {
         if (!editor) return
 
-        // If we switched notes, we MUST load the new content
-        if (activeNoteId !== prevId) {
+        // If we switched notes OR if we restored a version (timestamp changed), load the new content
+        if (activeNoteId !== prevId || (versionTimestamp && versionTimestamp !== prevVersionTimestamp)) {
             editor.commands.setContent(noteContent)
             setPrevId(activeNoteId)
+            if (versionTimestamp) setPrevVersionTimestamp(versionTimestamp)
         }
-        // Optional: If you need to support "Restore Version" which doesn't change ID but changes content:
-        // You might need a "versionTimestamp" in store to trigger this. 
-        // For now, let's assume valid re-loads happen via ID change or explicit action.
+    }, [activeNoteId, editor, noteContent, versionTimestamp])
 
-    }, [activeNoteId, editor, noteContent])
+    const [prevVersionTimestamp, setPrevVersionTimestamp] = useState(null)
 
     // We actually DO need to listen to noteContent for the initial load, 
     // BUT we need to be careful. The best pattern with Tiptap + Zustand is usually:
@@ -653,6 +653,52 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                 <History className="w-5 h-5" />
                             </button>
                             {/* Note: History popup logic would go here or handled by Sidebar/Global state */}
+                            {showHistory && (
+                                <div className="absolute top-full right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] flex flex-col max-h-96 animate-in fade-in zoom-in duration-200">
+                                    <div className="p-3 border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                            {language === 'fi' ? 'Versiohistoria' : 'Version History'}
+                                        </h3>
+                                    </div>
+                                    <div className="overflow-y-auto custom-scrollbar">
+                                        {versions.length === 0 ? (
+                                            <div className="p-8 text-center text-slate-500 text-sm">
+                                                {language === 'fi' ? 'Ei tallennettuja versioita.' : 'No saved versions yet.'}
+                                            </div>
+                                        ) : (
+                                            versions.map((v) => (
+                                                <button
+                                                    key={v.id}
+                                                    onClick={() => {
+                                                        if (window.confirm(language === 'fi' ? 'Palautetaanko tämä versio? Nykyiset muutokset menetetään.' : 'Restore this version? Current changes will be overwritten.')) {
+                                                            restoreVersion(v)
+                                                            setShowHistory(false)
+                                                        }
+                                                    }}
+                                                    className="w-full text-left p-3 hover:bg-slate-800 border-b border-slate-800/50 last:border-0 group transition-colors"
+                                                >
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="font-semibold text-slate-300 text-sm group-hover:text-indigo-300 transition-colors truncate pr-2">
+                                                            {v.title || (language === 'fi' ? 'Nimetön' : 'Untitled')}
+                                                        </span>
+                                                        <span className="text-[10px] text-slate-500 bg-slate-800 px-1.5 py-0.5 rounded border border-slate-700">
+                                                            v{v.id.slice(0, 4)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 flex items-center gap-2">
+                                                        <span>{new Date(v.created_at).toLocaleDateString()}</span>
+                                                        <span>&bull;</span>
+                                                        <span>{new Date(v.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                    </div>
+                                                    <div className="mt-2 text-[10px] text-slate-600 line-clamp-1 italic group-hover:text-slate-500">
+                                                        {v.content?.replace(/<[^>]*>/g, '').slice(0, 50) || '...'}
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
