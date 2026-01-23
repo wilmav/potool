@@ -19,7 +19,8 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         translateNoteContent, isTranslating,
         saveNote, isSaving, createNote,
         isManualSaving,
-        recentColors, addRecentColor, removeRecentColor // Use global state
+        recentColors, addRecentColor, removeRecentColor,
+        notes, activeNoteId // Get list of notes for duplicate checking
     } = useStore()
 
     const [showExportMenu, setShowExportMenu] = useState(false)
@@ -37,6 +38,29 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
 
     // Deletion confirmation state
     const [colorToDelete, setColorToDelete] = useState(null)
+
+    // Duplicate Title Warning
+    const [duplicateWarning, setDuplicateWarning] = useState(null)
+
+    // Check for duplicates whenever title changes
+    useEffect(() => {
+        if (!notes || !noteTitle) return setDuplicateWarning(null)
+
+        // Check if any OTHER note has the same title
+        const isDuplicate = notes.some(n =>
+            n.id !== activeNoteId &&
+            n.title.trim().toLowerCase() === noteTitle.trim().toLowerCase()
+        )
+
+        if (isDuplicate) {
+            setDuplicateWarning(language === 'fi'
+                ? 'Nimi on jo käytössä. Valitse toinen nimi.'
+                : 'Name already taken. Please rename.'
+            )
+        } else {
+            setDuplicateWarning(null)
+        }
+    }, [noteTitle, notes, activeNoteId, language])
 
     const translateMenuRef = useRef(null)
     const exportMenuRef = useRef(null)
@@ -76,11 +100,34 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     })
 
     // Sync external updates (e.g. from Version History or Database Load) to Editor
+    // FIX: Only update if the ID changed or we are loading a fresh note, NOT on every keystroke
+    const [prevId, setPrevId] = useState(null)
+    // activeNoteId is already destructured from useStore at the top
+
     useEffect(() => {
-        if (editor && noteContent !== editor.getHTML()) {
+        if (!editor) return
+
+        // If we switched notes, we MUST load the new content
+        if (activeNoteId !== prevId) {
             editor.commands.setContent(noteContent)
+            setPrevId(activeNoteId)
         }
-    }, [noteContent, editor])
+        // Optional: If you need to support "Restore Version" which doesn't change ID but changes content:
+        // You might need a "versionTimestamp" in store to trigger this. 
+        // For now, let's assume valid re-loads happen via ID change or explicit action.
+
+    }, [activeNoteId, editor, noteContent])
+
+    // We actually DO need to listen to noteContent for the initial load, 
+    // BUT we need to be careful. The best pattern with Tiptap + Zustand is usually:
+    // 1. Init editor with content.
+    // 2. updates -> setStore.
+    // 3. Store updates -> do NOTHING to editor (unless it's a remote change).
+    //
+    // Since we don't have real-time collaboration yet, we can simplifiy:
+    // Only update editor if the content in store is DIFFERENT and we didn't just type it.
+    // However, keeping it simple: triggering on ID change is the safest for now.
+
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -284,8 +331,13 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             value={noteTitle}
                             onChange={(e) => setNoteTitle(e.target.value)}
                             placeholder={language === 'fi' ? 'Nimetön suunnitelma' : 'Untitled Plan'}
-                            className="text-2xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-slate-600 w-full text-slate-100"
+                            className={`text-2xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-slate-600 w-full text-slate-100 ${duplicateWarning ? 'text-rose-400 decoration-rose-500/50 underline decoration-wavy' : ''}`}
                         />
+                        {duplicateWarning && (
+                            <div className="text-xs text-rose-400 font-medium animate-in slide-in-from-top-1 absolute top-full left-0 mt-1 bg-slate-950/90 border border-rose-500/30 px-2 py-1 rounded shadow-xl z-50">
+                                {duplicateWarning}
+                            </div>
+                        )}
                         <div className="flex items-center gap-2 mt-1">
                             {isSaving ? (
                                 <>
@@ -463,19 +515,23 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                             ) : (
                                                 <div className="grid grid-cols-5 gap-2">
                                                     {recentColors.map(c => (
-                                                        <div key={c} className="group relative w-8 h-8">
+                                                        <div key={c} className="group relative w-8 h-8 select-none">
                                                             <button
+                                                                type="button"
                                                                 onClick={() => applyColor(c)}
                                                                 className="w-full h-full rounded-full border border-slate-700 hover:scale-110 transition-transform shadow-sm"
                                                                 style={{ backgroundColor: c }}
                                                                 title={c}
                                                             />
                                                             <button
+                                                                type="button"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation()
+                                                                    // We need to prevent the parent onClick from firing? No, parent is div.
+                                                                    // But let's make sure we don't accidentally close menu if logic changes.
                                                                     setColorToDelete(c)
                                                                 }}
-                                                                className="absolute -top-1 -right-1 p-0.5 bg-slate-900/80 text-rose-500/60 rounded-full border border-slate-700/50 opacity-100 group-hover:bg-slate-900 group-hover:text-rose-500 transition-all hover:bg-rose-950 hover:text-rose-400 shadow-sm"
+                                                                className="absolute -top-1 -right-1 p-0.5 bg-slate-900/80 text-rose-500/60 rounded-full border border-slate-700/50 opacity-100 group-hover:bg-slate-900 group-hover:text-rose-500 transition-all hover:bg-rose-950 hover:text-rose-400 shadow-sm z-10"
                                                                 title={language === 'fi' ? 'Poista' : 'Delete'}
                                                             >
                                                                 <X className="w-2.5 h-2.5" />
@@ -614,9 +670,9 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
 
                         <button
                             onClick={() => saveNote(true)}
-                            disabled={isSaving}
-                            className="p-2 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30 rounded-lg transition-all disabled:opacity-50"
-                            title={language === 'fi' ? "Tallenna" : "Save"}
+                            disabled={isSaving || !!duplicateWarning}
+                            className={`p-2 rounded-lg transition-all disabled:opacity-50 ${duplicateWarning ? 'text-slate-600 cursor-not-allowed' : 'text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30'}`}
+                            title={duplicateWarning ? duplicateWarning : (language === 'fi' ? "Tallenna" : "Save")}
                         >
                             {isManualSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                         </button>

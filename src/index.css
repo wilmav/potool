@@ -41,30 +41,84 @@ body {
   margin: 1rem 0 !important;
 }
 
-.tiptap ul[data-type="taskList"] {
+/* Tiptap specific task list styles */
+ul[data-type="taskList"] {
   list-style: none !important;
-  padding: 0 !important;
+  padding-left: 0 !important;
+  margin-left: 0 !important;
 }
 
-.tiptap ul[data-type="taskList"] li {
+ul[data-type="taskList"] li {
   display: flex !important;
   align-items: flex-start !important;
+  gap: 0.75rem !important;
   margin-bottom: 0.5rem !important;
 }
 
-.tiptap ul[data-type="taskList"] label {
-  margin-right: 0.5rem !important;
+/* Hide the default marker that prose might be adding */
+ul[data-type="taskList"] li::marker {
+  content: none !important;
+}
+
+ul[data-type="taskList"] li>label {
+  flex: 0 0 auto !important;
+  margin-top: 0.2rem !important;
   user-select: none !important;
 }
 
-.tiptap ul[data-type="taskList"] input[type="checkbox"] {
-  cursor: pointer !important;
-  accent-color: #6366f1 !important;
-  width: 1.1rem !important;
-  height: 1.1rem !important;
-  margin-top: 0.2rem !important;
+ul[data-type="taskList"] li>div {
+  flex: 1 !important;
 }
 
-.tiptap ul[data-type="taskList"] div {
-  flex: 1 !important;
+/* Custom Checkbox Styling to ensure it looks like a "square" */
+ul[data-type="taskList"] input[type="checkbox"] {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background-color: transparent;
+  margin: 0;
+  cursor: pointer;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  border: 2px solid #64748b !important;
+  /* slate-500 */
+  border-radius: 0.25rem !important;
+  display: grid !important;
+  place-content: center !important;
+  transition: all 0.2s ease-in-out;
+}
+
+ul[data-type="taskList"] input[type="checkbox"]:hover {
+  background-color: rgba(99, 102, 241, 0.1);
+  /* indigo-500/10 */
+  border-color: #818cf8 !important;
+  /* indigo-400 */
+}
+
+ul[data-type="taskList"] input[type="checkbox"]:checked {
+  background-color: #6366f1 !important;
+  /* indigo-500 */
+  border-color: #6366f1 !important;
+}
+
+ul[data-type="taskList"] input[type="checkbox"]::before {
+  content: "";
+  width: 0.75rem;
+  height: 0.75rem;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em white;
+  transform-origin: center;
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+
+ul[data-type="taskList"] input[type="checkbox"]:checked::before {
+  transform: scale(1);
+}
+
+/* Cross out completed tasks */
+ul[data-type="taskList"] li[data-checked="true"]>div {
+  text-decoration: line-through;
+  color: #64748b;
+  /* slate-500 */
+  text-decoration-thickness: 2px;
 }

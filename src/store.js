@@ -147,14 +147,33 @@ export const useStore = create(persist((set, get) => ({
     },
 
     createNote: async () => {
-        const { user } = get()
+        const { user, notes, language } = get()
         if (!user) return
+
+        // 1. Determine base default title
+        const baseTitle = language === 'fi' ? 'Nimetön suunnitelma' : 'Untitled Plan'
+        let finalTitle = baseTitle
+
+        // 2. Check for duplicates and auto-increment
+        // We filter notes to find those that start with the baseTitle
+        // We need a loop or regex to find the next available number
+        // Simple approach: Check exact match, then append 2, 3, 4...
+
+        const existingTitles = new Set(notes.map(n => n.title))
+
+        if (existingTitles.has(finalTitle)) {
+            let counter = 2
+            while (existingTitles.has(`${baseTitle} ${counter}`)) {
+                counter++
+            }
+            finalTitle = `${baseTitle} ${counter}`
+        }
 
         const { data, error } = await supabase
             .from('notes')
             .insert({
                 user_id: user.id,
-                title: 'Untitled Plan',
+                title: finalTitle,
                 content: ''
             })
             .select()
