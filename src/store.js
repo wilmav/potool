@@ -144,6 +144,7 @@ export const useStore = create(persist((set, get) => ({
             .from('notes')
             .select('*')
             .eq('user_id', user.id)
+            .is('deleted_at', null) // Filter not deleted
             .order('updated_at', { ascending: false })
 
         if (data) set({ notes: data })
@@ -187,6 +188,7 @@ export const useStore = create(persist((set, get) => ({
                 activeNoteId: data.id,
                 noteTitle: data.title,
                 noteContent: data.content,
+                noteSummary: '', // Reset summary for new note
                 notes: [data, ...state.notes],
                 versions: []
             }))
@@ -202,13 +204,16 @@ export const useStore = create(persist((set, get) => ({
             .single()
 
         if (!error && data) {
-            set({
+            set(state => ({
                 activeNoteId: data.id,
                 noteContent: data.content || '',
                 noteTitle: data.title,
                 noteSummary: data.summary || '', // NEW: Load summary
-                isSaving: false
-            })
+                isSaving: false,
+                // Synchronize the notes list with the fresh data from the single fetch
+                // This fixes issues where the list might be stale (e.g. after restore)
+                notes: state.notes.map(n => n.id === data.id ? { ...n, ...data } : n)
+            }))
             get().fetchVersions(id)
         } else {
             set({ isSaving: false })
@@ -308,6 +313,7 @@ export const useStore = create(persist((set, get) => ({
             .from('note_versions')
             .select('*')
             .eq('note_id', noteId)
+            .is('deleted_at', null)
             .order('created_at', { ascending: false })
 
         if (error) {
@@ -325,6 +331,7 @@ export const useStore = create(persist((set, get) => ({
             .from('note_versions')
             .select('*')
             .eq('note_id', noteId)
+            .is('deleted_at', null)
             .order('created_at', { ascending: false })
 
         if (error) {
@@ -360,6 +367,140 @@ export const useStore = create(persist((set, get) => ({
         set({ noteSummary: newSummary })
         // Trigger save to update main note
         await get().saveNote()
+    },
+
+    // Trash State
+    trashNotes: [],
+    loadingTrash: false,
+
+    fetchTrash: async () => {
+        set({ loadingTrash: true })
+        const { user } = get()
+        if (!user) return
+
+        // Fetch deleted Notes
+        const { data: notes, error: notesError } = await supabase
+            .from('notes')
+            .select('*')
+            .eq('user_id', user.id)
+            .not('deleted_at', 'is', null)
+            .order('deleted_at', { ascending: false })
+
+        // Fetch deleted Versions
+        // We need to join with notes to ensure we only get user's versions
+        // But RLS should handle that if we trust it. 
+        // For safety, let's verify note ownership via RLS policy or implicit join
+        const { data: versions, error: versionsError } = await supabase
+            .from('note_versions')
+            .select('*, notes!inner(user_id)') // Use inner join to filter by user
+            .eq('notes.user_id', user.id)
+            .not('deleted_at', 'is', null)
+            .order('deleted_at', { ascending: false })
+
+        if (notesError) console.error('Error fetching trash notes:', notesError)
+        if (versionsError) console.error('Error fetching trash versions:', versionsError)
+
+        const allTrash = [
+            ...(notes || []).map(n => ({ ...n, type: 'note' })),
+            ...(versions || []).map(v => ({ ...v, type: 'version' }))
+        ].sort((a, b) => new Date(b.deleted_at) - new Date(a.deleted_at))
+
+        set({ trashNotes: allTrash, loadingTrash: false })
+    },
+
+    softDeleteNotes: async (items) => {
+        // items: { id: string, type: 'note' | 'version' }[]
+        const noteIds = items.filter(i => i.type === 'note').map(i => i.id)
+        const versionIds = items.filter(i => i.type === 'version').map(i => i.id)
+
+        const now = new Date().toISOString()
+
+        if (noteIds.length > 0) {
+            await supabase.from('notes').update({ deleted_at: now }).in('id', noteIds)
+            // Update local state: allow "undo" by just refreshing or filtering locally?
+            // Local update for immediate feedback:
+            set(state => {
+                const isActiveDeleted = state.activeNoteId && noteIds.includes(state.activeNoteId)
+                return {
+                    notes: state.notes.filter(n => !noteIds.includes(n.id)),
+                    activeNoteId: isActiveDeleted ? null : state.activeNoteId,
+                    noteContent: isActiveDeleted ? '' : state.noteContent,
+                    currentNote: isActiveDeleted ? null : state.currentNote // Also clear the note object
+                }
+            })
+        }
+
+        if (versionIds.length > 0) {
+            await supabase.from('note_versions').update({ deleted_at: now }).in('id', versionIds)
+            // Local update for sidebar versions
+            set(state => {
+                const newSidebarVersions = { ...state.sidebarVersions }
+                for (const noteId in newSidebarVersions) {
+                    newSidebarVersions[noteId] = newSidebarVersions[noteId].filter(v => !versionIds.includes(v.id))
+                }
+                return { sidebarVersions: newSidebarVersions, versions: state.versions.filter(v => !versionIds.includes(v.id)) }
+            })
+        }
+
+        // Refresh trash if it's open could be good, but we might not need to if we just push to it.
+        // For now, let's assume we fetch trash when opening it.
+    },
+
+    restoreNotes: async (items) => {
+        const { notes, trashNotes, language } = get()
+        const noteIds = items.filter(i => i.type === 'note').map(i => i.id)
+        const versionIds = items.filter(i => i.type === 'version').map(i => i.id)
+
+        if (noteIds.length > 0) {
+            // Check for title collisions
+            const existingTitles = new Set(notes.map(n => n.title))
+            const notesToRestore = trashNotes.filter(n => noteIds.includes(n.id) && n.type === 'note')
+
+            for (const note of notesToRestore) {
+                if (existingTitles.has(note.title)) {
+                    // Collision detected
+                    const baseTitle = note.title
+                    let newTitle = `${baseTitle} (${language === 'fi' ? 'Palautettu' : 'Restored'})`
+                    let counter = 2
+
+                    // Ensure unique restored name
+                    while (existingTitles.has(newTitle)) {
+                        newTitle = `${baseTitle} (${language === 'fi' ? 'Palautettu' : 'Restored'} ${counter})`
+                        counter++
+                    }
+
+                    // Rename in DB before restoring
+                    await supabase.from('notes').update({ title: newTitle }).eq('id', note.id)
+                }
+            }
+
+            await supabase.from('notes').update({ deleted_at: null }).in('id', noteIds)
+            // Cascade restore: automatically restore ALL versions for these notes
+            // This ensures that if a user restores a plan, they get their version history back
+            await supabase.from('note_versions').update({ deleted_at: null }).in('note_id', noteIds)
+        }
+        if (versionIds.length > 0) {
+            await supabase.from('note_versions').update({ deleted_at: null }).in('id', versionIds)
+        }
+
+        // Refetch everything to be safe
+        await get().fetchNotes()
+        await get().fetchTrash()
+        // Clear sidebar cache to ensure restored versions are re-fetched
+        set({ sidebarVersions: {} })
+    },
+
+    permanentDeleteNotes: async (items) => {
+        const noteIds = items.filter(i => i.type === 'note').map(i => i.id)
+        const versionIds = items.filter(i => i.type === 'version').map(i => i.id)
+
+        if (noteIds.length > 0) {
+            await supabase.from('notes').delete().in('id', noteIds)
+        }
+        if (versionIds.length > 0) {
+            await supabase.from('note_versions').delete().in('id', versionIds)
+        }
+        get().fetchTrash()
     },
 
     // Translation State & Action

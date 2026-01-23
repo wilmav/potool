@@ -1,15 +1,78 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store'
-import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code } from 'lucide-react'
+import { TrashBin } from './TrashBin'
+import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code, Trash2, X, Square, CheckSquare, MoreHorizontal } from 'lucide-react'
 
 export function Sidebar() {
     const {
         language, bullets, loadingBullets,
         toggleBulletActive, hideBullet, unhideBullet, addToNote,
         notes, fetchNotes, loadNote, createNote, activeNoteId,
-        sidebarVersions, fetchSidebarVersions, restoreVersion
+        sidebarVersions, fetchSidebarVersions, restoreVersion, softDeleteNotes
     } = useStore()
+
+    const [isSelectionMode, setIsSelectionMode] = useState(false)
+    const [selectedItems, setSelectedItems] = useState(new Set()) // Set<"note:id" | "version:id">
+    const [showTrash, setShowTrash] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+    const toggleSelection = (id, type, noteId = null) => {
+        const key = `${type}:${id}`
+        const newSet = new Set(selectedItems)
+
+        if (newSet.has(key)) {
+            newSet.delete(key)
+            // If we are deselecting a version, we MUST deselect the parent note
+            // to ensure the note container is not deleted.
+            if (type === 'version' && noteId) {
+                newSet.delete(`note:${noteId}`)
+            }
+        } else {
+            newSet.add(key)
+        }
+        setSelectedItems(newSet)
+    }
+
+    const handleSelectParent = async (noteId, isSelected) => {
+        const newSet = new Set(selectedItems)
+        const parentKey = `note:${noteId}`
+
+        if (isSelected) {
+            newSet.add(parentKey)
+            // Auto-expand and fetching versions to select them
+            if (!expandedNoteIds.has(noteId)) {
+                await toggleNoteExpansion({ stopPropagation: () => { } }, noteId)
+            }
+            // We need to wait for sidebarVersions to populate if it wasn't there
+            // But fetchSidebarVersions is async. We can check store state after a small delay or trust the flow.
+            // For now, let's select what we have. 
+            // Ideally we should wait, but `toggleNoteExpansion` calls `fetchSidebarVersions`.
+            // We can read immediately after if we await.
+
+            // Re-read versions from store (it's updated by toggleNoteExpansion -> fetchSidebarVersions)
+            const versions = useStore.getState().sidebarVersions[noteId] || []
+            versions.forEach(v => newSet.add(`version:${v.id}`))
+        } else {
+            newSet.delete(parentKey)
+            // Deselect children
+            const versions = sidebarVersions[noteId] || []
+            versions.forEach(v => newSet.delete(`version:${v.id}`))
+        }
+        setSelectedItems(newSet)
+    }
+
+    // Handlers for Delete
+    const handleDeleteSelected = async () => {
+        const items = Array.from(selectedItems).map(key => {
+            const [type, id] = key.split(':')
+            return { type, id }
+        })
+        await softDeleteNotes(items)
+        setSelectedItems(new Set())
+        setShowDeleteConfirm(false)
+        setIsSelectionMode(false)
+    }
 
     const [expandedNoteIds, setExpandedNoteIds] = useState(new Set())
 
@@ -228,13 +291,53 @@ export function Sidebar() {
 
                 {view === 'plans' && (
                     <div className="flex flex-col h-full">
-                        <button
-                            onClick={createNote}
-                            className="w-full flex items-center justify-center gap-2 py-3 mb-6 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98]"
-                        >
-                            <Plus className="w-5 h-5" />
-                            <span>{language === 'fi' ? 'Uusi suunnitelma' : 'New Plan'}</span>
-                        </button>
+                        {!isSelectionMode ? (
+                            <div className="flex gap-2 mb-6">
+                                <button
+                                    onClick={createNote}
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98]"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                    <span>{language === 'fi' ? 'Suunnitelma' : 'New Plan'}</span>
+                                </button>
+                                <button
+                                    onClick={() => setIsSelectionMode(true)}
+                                    className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl border border-slate-700 hover:border-slate-600 transition-colors"
+                                    title={language === 'fi' ? 'Valitse' : 'Select'}
+                                >
+                                    <CheckSquare className="w-5 h-5" />
+                                </button>
+                                <button
+                                    onClick={() => setShowTrash(true)}
+                                    className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 rounded-xl border border-slate-700 hover:border-slate-600 transition-colors"
+                                    title={language === 'fi' ? 'Roskakori' : 'Trash'}
+                                >
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 mb-6 p-1 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                                <button
+                                    onClick={() => {
+                                        setIsSelectionMode(false)
+                                        setSelectedItems(new Set())
+                                    }}
+                                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                                >
+                                    {language === 'fi' ? 'Peruuta' : 'Cancel'}
+                                </button>
+                                <div className="flex-1 text-center text-sm font-medium text-indigo-300">
+                                    {selectedItems.size} {language === 'fi' ? 'valittu' : 'selected'}
+                                </div>
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    disabled={selectedItems.size === 0}
+                                    className="px-4 py-2 text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                >
+                                    {language === 'fi' ? 'Poista' : 'Delete'}
+                                </button>
+                            </div>
+                        )}
 
                         <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                             {notes.length === 0 ? (
@@ -250,15 +353,37 @@ export function Sidebar() {
                                             : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800 hover:border-slate-600'
                                             }`}
                                     >
-                                        <button
-                                            onClick={() => loadNote(note.id)}
-                                            className="w-full text-left p-4"
+                                        <div
+                                            onClick={(e) => {
+                                                if (isSelectionMode) {
+                                                    // Allow clicking anywhere on the row to select
+                                                    handleSelectParent(note.id, !selectedItems.has(`note:${note.id}`))
+                                                } else {
+                                                    loadNote(note.id)
+                                                }
+                                            }}
+                                            className="w-full text-left p-4 cursor-pointer"
                                         >
                                             <div className="flex items-center justify-between min-w-0 relative group/item pr-6">
                                                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                                                    <div className={`p-2 rounded-lg shrink-0 ${activeNoteId === note.id ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
-                                                        <FileText className="w-5 h-5" />
-                                                    </div>
+                                                    {isSelectionMode ? (
+                                                        <div
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleSelectParent(note.id, !selectedItems.has(`note:${note.id}`))
+                                                            }}
+                                                            className="p-2 shrink-0 cursor-pointer relative z-30"
+                                                        >
+                                                            {selectedItems.has(`note:${note.id}`)
+                                                                ? <CheckSquare className="w-5 h-5 text-indigo-500" />
+                                                                : <Square className="w-5 h-5 text-slate-600 hover:text-slate-400" />
+                                                            }
+                                                        </div>
+                                                    ) : (
+                                                        <div className={`p-2 rounded-lg shrink-0 ${activeNoteId === note.id ? 'bg-indigo-500/20 text-indigo-300' : 'bg-slate-800 text-slate-400'}`}>
+                                                            <FileText className="w-5 h-5" />
+                                                        </div>
+                                                    )}
                                                     <div className="min-w-0 flex-1 text-left">
                                                         <h3 className={`font-semibold text-sm truncate pr-2 ${activeNoteId === note.id ? 'text-indigo-100' : 'text-slate-200 group-hover:text-white'}`}>
                                                             {note.title || (language === 'fi' ? 'Nimetön' : 'Untitled')}
@@ -286,7 +411,7 @@ export function Sidebar() {
                                                     />
                                                 )}
                                             </div>
-                                        </button>
+                                        </div>
 
                                         {/* Versions Nested List */}
                                         {expandedNoteIds.has(note.id) && sidebarVersions[note.id] && (
@@ -303,13 +428,28 @@ export function Sidebar() {
                                                             className="relative group/version"
                                                         >
                                                             <button
-                                                                onClick={() => restoreVersion(version)}
-                                                                className="w-full text-left p-2 rounded hover:bg-slate-700/50 text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center justify-between"
+                                                                onClick={(e) => {
+                                                                    if (isSelectionMode) {
+                                                                        e.stopPropagation()
+                                                                        toggleSelection(version.id, 'version', note.id)
+                                                                    } else {
+                                                                        restoreVersion(version)
+                                                                    }
+                                                                }}
+                                                                className="w-full text-left p-2 rounded hover:bg-slate-700/50 text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-2"
                                                             >
-                                                                <span>
+                                                                {isSelectionMode && (
+                                                                    <div className="shrink-0 relative z-30">
+                                                                        {selectedItems.has(`version:${version.id}`)
+                                                                            ? <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
+                                                                            : <Square className="w-3.5 h-3.5 text-slate-600 hover:text-slate-400" />
+                                                                        }
+                                                                    </div>
+                                                                )}
+                                                                <span className="flex-1">
                                                                     {new Date(version.created_at).toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-US', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} {new Date(version.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                                                 </span>
-                                                                {version.summary && (
+                                                                {version.summary && !isSelectionMode && (
                                                                     <Info className="w-3 h-3 text-slate-600 group-hover/version:text-indigo-400" />
                                                                 )}
                                                             </button>
@@ -352,6 +492,48 @@ export function Sidebar() {
                     </div>
                 )}
             </div>
+
+            {/* Trash Bin Modal */}
+            {showTrash && <TrashBin onClose={() => setShowTrash(false)} />}
+
+            {/* Delete Confirmation Modal (Main View) */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur flex items-center justify-center p-6">
+                    <div className="bg-slate-800 border border-slate-700 p-6 rounded-xl max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-500/20 mb-4 mx-auto">
+                            <Trash2 className="w-6 h-6 text-rose-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white text-center mb-2">
+                            {language === 'fi' ? 'Siirrä roskakoriin?' : 'Move to Trash?'}
+                        </h3>
+                        <p className="text-sm text-slate-400 text-center mb-6">
+                            {language === 'fi'
+                                ? `Haluatko varmasti poistaa ${selectedItems.size} kohdetta?`
+                                : `Are you sure you want to delete ${selectedItems.size} items?`}
+                            <br />
+                            <span className="text-xs opacity-75 mt-2 block">
+                                {language === 'fi'
+                                    ? 'Kohteet säilyvät roskakorissa 30 päivää.'
+                                    : 'Items will be kept in trash for 30 days.'}
+                            </span>
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="flex-1 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold text-sm transition-colors"
+                            >
+                                {language === 'fi' ? 'Peruuta' : 'Cancel'}
+                            </button>
+                            <button
+                                onClick={handleDeleteSelected}
+                                className="flex-1 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm shadow-lg shadow-rose-500/20 transition-colors"
+                            >
+                                {language === 'fi' ? 'Poista' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
