@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store'
 import { TrashBin } from './TrashBin'
-import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code, Trash2, X, Square, CheckSquare, MoreHorizontal } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code, Trash2, X, Square, CheckSquare, MoreHorizontal, LayoutDashboard } from 'lucide-react'
 
 export function Sidebar() {
     const {
@@ -161,16 +161,17 @@ export function Sidebar() {
     return (
         <div className="flex flex-col h-full">
             {/* View Switcher */}
-            <div className="p-4 pb-0 grid grid-cols-2 gap-2">
+            <div className="p-4 pb-0 grid grid-cols-3 gap-2">
                 <button
                     onClick={() => setView('library')}
                     className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === 'library'
                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                         : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                         }`}
+                    title={language === 'fi' ? 'Kirjasto' : 'Library'}
                 >
                     <Layout className="w-4 h-4" />
-                    {language === 'fi' ? 'Kirjasto' : 'Library'}
+                    <span className="hidden sm:inline lg:hidden xl:inline">{language === 'fi' ? 'Kirjasto' : 'Library'}</span>
                 </button>
                 <button
                     onClick={() => setView('plans')}
@@ -178,9 +179,18 @@ export function Sidebar() {
                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
                         : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
                         }`}
+                    title={language === 'fi' ? 'Suunnitelmat' : 'My Plans'}
                 >
                     <FolderOpen className="w-4 h-4" />
-                    {language === 'fi' ? 'Suunnitelmat' : 'My Plans'}
+                    <span className="hidden sm:inline lg:hidden xl:inline">{language === 'fi' ? 'Suunnitelmat' : 'Plans'}</span>
+                </button>
+                <button
+                    onClick={() => window.location.href = '/dashboard'}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800`}
+                    title="Dashboard"
+                >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span className="hidden sm:inline lg:hidden xl:inline">Dash</span>
                 </button>
             </div>
 
