@@ -113,7 +113,7 @@ export function Sidebar() {
                         <div className="space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
                             {loadingBullets ? (
                                 <div className="flex justify-center py-8 text-slate-500">
-                                    <span className="text-sm animate-pulse">Loading library...</span>
+                                    <span className="text-sm animate-pulse">{language === 'fi' ? 'Ladataan kirjastoa...' : 'Loading library...'}</span>
                                 </div>
                             ) : (
                                 themes.map((theme) => {
@@ -157,7 +157,7 @@ export function Sidebar() {
                                                         }}
                                                         className="w-4 h-4 rounded-full border border-slate-600 hover:scale-110 transition-transform"
                                                         style={{ backgroundColor: categoryColors[theme] || '#334155' }}
-                                                        title="Category Color"
+                                                        title={language === 'fi' ? 'Kategorian väri' : 'Category Color'}
                                                     />
 
                                                     {colorPickerOpen === theme && (

@@ -70,7 +70,7 @@ function App() {
     }, [isResizing])
 
     if (loadingAuth) {
-        return <div className="h-screen w-screen bg-slate-950 flex items-center justify-center text-slate-500">Loading...</div>
+        return <div className="h-screen w-screen bg-slate-950 flex items-center justify-center text-slate-500">{language === 'fi' ? 'Ladataan...' : 'Loading...'}</div>
     }
 
     if (!user) {
