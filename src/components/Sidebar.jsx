@@ -567,19 +567,16 @@ function BulletCard({ bullet, language, themeColor }) {
 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200 scale-95 group-hover:scale-100">
                     <ActionBtn
-                        onClick={() => setShowInfo(!showInfo)}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            setShowInfo(!showInfo)
+                        }}
                         active={showInfo}
                         icon={Info}
                         label={language === 'fi' ? "Lisätietoa" : "Info"}
                         extraClass="text-sky-400 hover:text-sky-300 hover:bg-sky-900/20 mr-1"
                     />
 
-                    <ActionBtn
-                        onClick={() => toggleBulletActive(bullet.id)}
-                        active={bullet.is_active}
-                        icon={Check}
-                        label={language === 'fi' ? "Aktivoi" : "Activate"}
-                    />
                     <button
                         onClick={() => hideBullet(bullet.id)}
                         title={language === 'fi' ? "Piilota" : "Hide"}
@@ -587,12 +584,6 @@ function BulletCard({ bullet, language, themeColor }) {
                     >
                         <EyeOff className="w-3.5 h-3.5" />
                     </button>
-                    <ActionBtn
-                        onClick={() => addToNote(primaryText, 'p', themeColor)}
-                        icon={Code}
-                        label={language === 'fi' ? "Lisää leipätekstinä" : "Add as Body"}
-                        extraClass="hover:text-sky-300"
-                    />
                     <ActionBtn
                         onClick={() => addToNote(primaryText, 'h2', themeColor)}
                         icon={Plus}

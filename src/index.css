@@ -60,59 +60,14 @@ ul[data-type="taskList"] li::marker {
   content: none !important;
 }
 
-ul[data-type="taskList"] li>label {
-  flex: 0 0 auto !important;
-  margin-top: 0.2rem !important;
-  user-select: none !important;
-}
-
-ul[data-type="taskList"] li>div {
-  flex: 1 !important;
-}
-
-/* Custom Checkbox Styling to ensure it looks like a "square" */
+/* Restore visible checkboxes */
 ul[data-type="taskList"] input[type="checkbox"] {
-  -webkit-appearance: none !important;
-  appearance: none !important;
-  background-color: transparent;
-  margin: 0;
+  appearance: auto !important;
   cursor: pointer;
-  width: 1.25rem !important;
-  height: 1.25rem !important;
-  border: 2px solid #64748b !important;
-  /* slate-500 */
-  border-radius: 0.25rem !important;
-  display: grid !important;
-  place-content: center !important;
-  transition: all 0.2s ease-in-out;
-}
-
-ul[data-type="taskList"] input[type="checkbox"]:hover {
-  background-color: rgba(99, 102, 241, 0.1);
-  /* indigo-500/10 */
-  border-color: #818cf8 !important;
-  /* indigo-400 */
-}
-
-ul[data-type="taskList"] input[type="checkbox"]:checked {
-  background-color: #6366f1 !important;
-  /* indigo-500 */
-  border-color: #6366f1 !important;
-}
-
-ul[data-type="taskList"] input[type="checkbox"]::before {
-  content: "";
-  width: 0.75rem;
-  height: 0.75rem;
-  transform: scale(0);
-  transition: 120ms transform ease-in-out;
-  box-shadow: inset 1em 1em white;
-  transform-origin: center;
-  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-}
-
-ul[data-type="taskList"] input[type="checkbox"]:checked::before {
-  transform: scale(1);
+  margin-top: 0.3rem;
+  margin-right: 0.5rem;
+  width: 1rem;
+  height: 1rem;
 }
 
 /* Cross out completed tasks */

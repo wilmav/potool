@@ -120,15 +120,17 @@ export const useStore = create(persist((set, get) => ({
         })
     },
 
-    addToNote: (text, type = 'h2', color = null) => set((state) => {
-        const inner = color ? `<span style="color: ${color}">${text}</span>` : text
-        const element = type === 'h2'
-            ? `<h2>${inner}</h2>`
-            : `<p>${inner}</p>`
+    // Content Insertion Trigger
+    insertionTrigger: 0,
+    insertedContent: null, // { text, type, color }
 
-        // Append new content and ensure there's at least one empty line after
-        const newContent = state.noteContent + element + '<p></p>'
-        return { noteContent: newContent }
+    addToNote: (text, type = 'h2', color = null) => set((state) => {
+        // We don't update noteContent string directly anymore to avoid overwriting editor state blindy.
+        // Instead, we signal the editor to insert this content.
+        return {
+            insertionTrigger: Date.now(),
+            insertedContent: { text, type, color }
+        }
     }),
 
     // Cloud Actions

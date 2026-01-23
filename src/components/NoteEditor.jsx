@@ -1,6 +1,7 @@
 import { useStore } from '../store'
 import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut, ChevronRight, Layout, Pilcrow, Indent, Outdent, List, ListOrdered, X, Disc } from 'lucide-react'
 import { jsPDF } from 'jspdf'
+import { supabase } from '../supabase'
 import { useState, useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
 import { createPortal } from 'react-dom'
@@ -10,7 +11,9 @@ import { TextStyle } from '@tiptap/extension-text-style'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Underline from '@tiptap/extension-underline'
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList } from 'lucide-react'
+import ImageResize from 'tiptap-extension-resize-image'
+import Youtube from '@tiptap/extension-youtube'
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon } from 'lucide-react'
 
 export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const {
@@ -111,6 +114,10 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
             TaskItem.configure({
                 nested: true,
             }),
+            ImageResize,
+            Youtube.configure({
+                controls: false,
+            }),
             // Underline is apparently included or duplicated
         ],
         content: noteContent, // Initial content
@@ -118,6 +125,27 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
             attributes: {
                 class: 'prose prose-invert max-w-none focus:outline-none min-h-[calc(100vh-300px)] text-slate-300',
             },
+            handleDrop: (view, event, slice, moved) => {
+                if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+                    const file = event.dataTransfer.files[0]
+                    if (file.type.startsWith('image/')) {
+                        // Async upload
+                        uploadImage(file).then(url => {
+                            if (url) {
+                                const { schema } = view.state
+                                const imageNode = schema.nodes.imageResize || schema.nodes.image
+                                if (imageNode) {
+                                    const node = imageNode.create({ src: url })
+                                    const transaction = view.state.tr.replaceSelectionWith(node)
+                                    view.dispatch(transaction)
+                                }
+                            }
+                        })
+                        return true // handled
+                    }
+                }
+                return false
+            }
         },
         onUpdate: ({ editor }) => {
             setNoteContent(editor.getHTML())
@@ -139,6 +167,24 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
             if (versionTimestamp) setPrevVersionTimestamp(versionTimestamp)
         }
     }, [activeNoteId, editor, noteContent, versionTimestamp])
+
+    // Effect for inserting content from Sidebar
+    const { insertionTrigger, insertedContent } = useStore()
+    useEffect(() => {
+        if (!editor || !insertedContent) return
+
+        const { text, type, color } = insertedContent
+        const inner = color ? `<span style="color: ${color}">${text}</span>` : text
+        let contentToInsert = ''
+
+        if (type === 'h2') {
+            contentToInsert = `<h2>${inner}</h2><p></p>`
+        } else {
+            contentToInsert = `<p>${inner}</p><p></p>`
+        }
+
+        editor.chain().focus().insertContentAt(editor.state.doc.content.size, contentToInsert).run()
+    }, [insertionTrigger])
 
     const [prevVersionTimestamp, setPrevVersionTimestamp] = useState(null)
 
@@ -219,6 +265,33 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         editor.chain().focus().insertContent(`<p><strong>${timeStr}</strong></p>`).run()
     }
 
+    const uploadImage = async (file) => {
+        try {
+            const { user } = useStore.getState()
+            if (!user) throw new Error('User not authenticated')
+
+            const fileExt = file.name.split('.').pop()
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`
+            const filePath = `${user.id}/${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('images')
+                .upload(filePath, file)
+
+            if (uploadError) throw uploadError
+
+            const { data } = supabase.storage
+                .from('images')
+                .getPublicUrl(filePath)
+
+            return data.publicUrl
+        } catch (error) {
+            console.error('Error uploading image:', error)
+            alert(language === 'fi' ? 'Virhe kuvan latauksessa' : 'Error uploading image')
+            return null
+        }
+    }
+
     const applyColor = (color, closeMenu = true) => {
         if (!editor) return
         editor.chain().focus().setColor(color).run()
@@ -228,6 +301,21 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         // }
         if (closeMenu) {
             setShowColorMenu(false)
+        }
+    }
+
+    const addImage = () => {
+        const url = window.prompt(language === 'fi' ? 'Syötä kuvan URL-osoite' : 'Enter image URL')
+        if (url && editor) {
+            // Use insertContent which works with any image node name (Tiptap resolves HTML)
+            editor.chain().focus().insertContent(`<img src="${url}" />`).run()
+        }
+    }
+
+    const addVideo = () => {
+        const url = window.prompt(language === 'fi' ? 'Syötä YouTube-videon URL' : 'Enter YouTube URL')
+        if (url && editor) {
+            editor.chain().focus().setYoutubeVideo({ src: url }).run()
         }
     }
 
@@ -319,6 +407,29 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
 
                         doc.text(splitLines, margin, cursorY)
                         cursorY += (splitLines.length * 6) + 2
+                    } else if (node.type === 'image') {
+                        const src = node.attrs?.src
+                        if (src) {
+                            // Check if standard Base64
+                            if (src.startsWith('data:image')) {
+                                try {
+                                    const imgProps = doc.getImageProperties(src)
+                                    const imgWidth = contentWidth
+                                    const imgHeight = (imgProps.height * imgWidth) / imgProps.width
+
+                                    // Check page break
+                                    if (cursorY + imgHeight > pageHeight - margin) {
+                                        doc.addPage()
+                                        cursorY = margin
+                                    }
+
+                                    doc.addImage(src, 'PNG', margin, cursorY, imgWidth, imgHeight)
+                                    cursorY += imgHeight + 5
+                                } catch (e) {
+                                    console.warn('Could not add image to PDF', e)
+                                }
+                            }
+                        }
                     }
                 })
             }
@@ -340,7 +451,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     return (
         <div className="flex flex-col h-full relative z-10">
             {/* Toolbar */}
-            <div className={`h-20 px-8 border-b border-slate-800/50 flex items-center justify-between shrink-0 bg-slate-950/50 backdrop-blur-sm transition-all duration-300`}>
+            <div className={`h-20 px-8 border-b border-slate-800/50 flex items-center justify-between shrink-0 bg-slate-950/50 backdrop-blur-sm transition-all duration-300 relative z-50`}>
                 <div className="flex-1 mr-8 flex items-center gap-4">
                     {!isSidebarOpen && (
                         <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-300 mr-4">
@@ -472,6 +583,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             {/* Text Styles Dropdown */}
                             <div className="relative" ref={textStyleMenuRef}>
                                 <button
+                                    onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => setShowTextStyleMenu(!showTextStyleMenu)}
                                     className="flex items-center gap-1 p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
                                     title={language === 'fi' ? "Tekstityylit" : "Text Styles"}
@@ -480,29 +592,29 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                     <ChevronDown className="w-3 h-3" />
                                 </button>
                                 {showTextStyleMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] flex flex-col p-1">
-                                        <button onClick={() => { editor.chain().focus().setParagraph().run(); setShowTextStyleMenu(false) }} className="flex items-center gap-2 px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 rounded text-left">
-                                            <Pilcrow className="w-4 h-4" /> {language === 'fi' ? 'Perusteksti' : 'Normal Text'}
+                                    <div className="absolute top-full left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[100] flex flex-col p-1">
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { editor.chain().focus().setParagraph().run(); setShowTextStyleMenu(false) }} className="flex items-center gap-2 px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 rounded-md text-left w-full cursor-pointer transition-colors">
+                                            <Pilcrow className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Perusteksti' : 'Normal Text'}
                                         </button>
                                         <div className="h-px bg-slate-800 my-1"></div>
-                                        <button onClick={() => toggleHeader(1)} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left font-bold ${editor.isActive('heading', { level: 1 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
-                                            <Heading1 className="w-4 h-4" /> Heading 1
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleHeader(1)} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left font-bold w-full cursor-pointer transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Heading1 className="w-4 h-4 shrink-0" /> Heading 1
                                         </button>
-                                        <button onClick={() => toggleHeader(2)} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left font-bold ${editor.isActive('heading', { level: 2 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
-                                            <Heading2 className="w-4 h-4" /> Heading 2
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleHeader(2)} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left font-bold w-full cursor-pointer transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Heading2 className="w-4 h-4 shrink-0" /> Heading 2
                                         </button>
                                         <div className="h-px bg-slate-800 my-1"></div>
-                                        <button onClick={() => { editor.chain().focus().toggleBold().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('bold') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
-                                            <Bold className="w-4 h-4" /> {language === 'fi' ? 'Lihavointi' : 'Bold'}
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { editor.chain().focus().toggleBold().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left w-full cursor-pointer transition-colors ${editor.isActive('bold') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Bold className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Lihavointi' : 'Bold'}
                                         </button>
-                                        <button onClick={() => { editor.chain().focus().toggleItalic().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('italic') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
-                                            <Italic className="w-4 h-4" /> {language === 'fi' ? 'Kursivointi' : 'Italic'}
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { editor.chain().focus().toggleItalic().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left w-full cursor-pointer transition-colors ${editor.isActive('italic') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Italic className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Kursivointi' : 'Italic'}
                                         </button>
-                                        <button onClick={() => { editor.chain().focus().toggleUnderline().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('underline') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
-                                            <UnderlineIcon className="w-4 h-4" /> {language === 'fi' ? 'Alleviivaus' : 'Underline'}
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { editor.chain().focus().toggleUnderline().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left w-full cursor-pointer transition-colors ${editor.isActive('underline') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <UnderlineIcon className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Alleviivaus' : 'Underline'}
                                         </button>
-                                        <button onClick={() => { editor.chain().focus().toggleStrike().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('strike') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
-                                            <Strikethrough className="w-4 h-4" /> {language === 'fi' ? 'Yliviivaus' : 'Strikethrough'}
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { editor.chain().focus().toggleStrike().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left w-full cursor-pointer transition-colors ${editor.isActive('strike') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Strikethrough className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Yliviivaus' : 'Strikethrough'}
                                         </button>
                                     </div>
                                 )}
@@ -511,6 +623,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             {/* Lists Dropdown */}
                             <div className="relative" ref={listMenuRef}>
                                 <button
+                                    onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => setShowListMenu(!showListMenu)}
                                     className="flex items-center gap-1 p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
                                     title={language === 'fi' ? "Listat" : "Lists"}
@@ -519,24 +632,27 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                     <ChevronDown className="w-3 h-3" />
                                 </button>
                                 {showListMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] flex flex-col p-1">
+                                    <div className="absolute top-full left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[100] flex flex-col p-1">
                                         <button
+                                            onMouseDown={(e) => e.preventDefault()}
                                             onClick={() => { editor.chain().focus().toggleBulletList().run(); setShowListMenu(false) }}
-                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('bulletList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
+                                            className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left w-full cursor-pointer transition-colors ${editor.isActive('bulletList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
                                         >
-                                            <List className="w-4 h-4" /> {language === 'fi' ? 'Luettelomerkit' : 'Bullet List'}
+                                            <List className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Luettelomerkit' : 'Bullet List'}
                                         </button>
                                         <button
+                                            onMouseDown={(e) => e.preventDefault()}
                                             onClick={() => { editor.chain().focus().toggleOrderedList().run(); setShowListMenu(false) }}
-                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('orderedList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
+                                            className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left w-full cursor-pointer transition-colors ${editor.isActive('orderedList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
                                         >
-                                            <ListOrdered className="w-4 h-4" /> {language === 'fi' ? 'Numeroitu lista' : 'Ordered List'}
+                                            <ListOrdered className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Numeroitu lista' : 'Ordered List'}
                                         </button>
                                         <button
+                                            onMouseDown={(e) => e.preventDefault()}
                                             onClick={() => { editor.chain().focus().toggleTaskList().run(); setShowListMenu(false) }}
-                                            className={`flex items-center gap-2 px-3 py-2 text-sm rounded text-left ${editor.isActive('taskList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
+                                            className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left w-full cursor-pointer transition-colors ${editor.isActive('taskList') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}
                                         >
-                                            <Check className="w-4 h-4" /> {language === 'fi' ? 'Tehtävälista' : 'Task List'}
+                                            <Check className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Tehtävälista' : 'Task List'}
                                         </button>
                                     </div>
                                 )}
@@ -559,7 +675,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                     <ChevronDown className="w-3 h-3" />
                                 </button>
                                 {showColorMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60] p-3">
+                                    <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[100] p-3">
                                         {/* Custom Picker Section */}
                                         <div className="mb-4">
                                             <div className="text-xs font-semibold text-slate-500 mb-2 uppercase">{language === 'fi' ? 'Valitse uusi' : 'Pick New'}</div>
@@ -677,6 +793,29 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             </div>
                             <div className="w-px h-6 bg-slate-800 mx-2"></div>
                         </>
+                    )}
+
+                    {/* Group 2.5: Media */}
+                    {!isSourceMode && editor && (
+                        <div className="flex items-center gap-1">
+                            <button
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={addImage}
+                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                title={language === 'fi' ? "Lisää kuva" : "Insert Image"}
+                            >
+                                <ImageIcon className="w-5 h-5" />
+                            </button>
+                            <button
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={addVideo}
+                                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                title={language === 'fi' ? "Lisää video" : "Insert Video"}
+                            >
+                                <YoutubeIcon className="w-5 h-5" />
+                            </button>
+                            <div className="w-px h-6 bg-slate-800 mx-2"></div>
+                        </div>
                     )}
 
                     {/* Group 3: Utilities (Translate, Source, Export) */}
