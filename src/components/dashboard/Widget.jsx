@@ -19,10 +19,10 @@ export const Widget = forwardRef(({ className, style, onMouseDown, onMouseUp, on
         >
             <div className={`h-full bg-slate-900/50 backdrop-blur-sm rounded-3xl p-5 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-slate-600 transition-all duration-300 flex flex-col gap-3 group relative overflow-hidden`}>
 
-                {/* Drag Handle Area - Optional, RGL drags by whole item by default unless draggableHandle is set */}
-                <div className="flex items-center justify-between text-xs uppercase tracking-wider font-bold opacity-70 mb-2 select-none">
+                {/* Drag Handle Area */}
+                <div className="widget-drag-handle flex items-center justify-between text-xs uppercase tracking-wider font-bold opacity-70 mb-2 select-none cursor-move">
                     <span style={{ color: color || '#fff' }}>{title || type}</span>
-                    <button className="hover:bg-white/10 p-1.5 rounded-full transition-colors text-slate-400 hover:text-white">
+                    <button className="hover:bg-white/10 p-1.5 rounded-full transition-colors text-slate-400 hover:text-white cursor-pointer" onMouseDown={(e) => e.stopPropagation()}>
                         <Settings size={14} />
                     </button>
                 </div>
