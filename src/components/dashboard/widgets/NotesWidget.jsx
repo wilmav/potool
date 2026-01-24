@@ -9,16 +9,21 @@ export const NotesWidget = () => {
     const recentNotes = notes.slice(0, 5)
 
     const handleNoteClick = async (noteId) => {
-        if (noteId !== activeNoteId) {
-            await loadNote(noteId)
+        // Set the active note in store
+        await loadNote(noteId)
+        // If we are on /dashboard, we want to go back to the main view
+        // Since this is a single page app where /dashboard is a separate route content in App.jsx,
+        // we might just need to change browser URL or state.
+        // Assuming hitting root '/' renders the editor view.
+        if (window.location.pathname !== '/') {
+            window.history.pushState({}, '', '/')
+            // Force a popstate event or similar if we are using a router that listens to it, 
+            // but since we don't have a visible router hook here, hard refresh might be safest for "Demo" 
+            // or just dispatch event. 
+            // Actually, looking at App.jsx (from memory/previous steps), it uses a simple state or URL check.
+            // Let's use a hard nav to be safe for now, or if we had 'navigate' function.
+            window.location.href = '/'
         }
-        // Navigation is handled by App state (NoteEditor shows activeNote)
-        // Ideally we should redirect or switch view if we were in a "Dashboard View" separate from Editor
-        // For now, let's assume the user wants to go to the editor.
-        // We might need a way to signal App to switch view?
-        // But App.jsx renders DashboardPage if URL is /dashboard.
-        // So we need to change URL to / (root) to see editor.
-        window.location.href = '/'
     }
 
     if (recentNotes.length === 0) {

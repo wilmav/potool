@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useStore } from '../../store'
-import { Plus, Layout, Settings, Grid, Presentation, Hash } from 'lucide-react' // Using lucide-react now as it helps consistency
+import { Plus, Layout, Settings, Grid, Presentation, Hash } from 'lucide-react'
+import { AddWidgetModal } from './AddWidgetModal' // New import
 
 // Helper to map icons string to Component
 const IconMap = {
@@ -83,10 +84,12 @@ export const DashboardLayout = ({ children }) => {
         }
     }
 
-    const handleAddWidget = async () => {
-        const type = prompt("Lisää widget (notes, stats, calendar):", "notes")
+    const [isAddWidgetOpen, setIsAddWidgetOpen] = useState(false)
+
+    const handleAddWidget = (type) => {
         if (type) {
-            await addWidget(type.toLowerCase())
+            addWidget(type.toLowerCase())
+            setIsAddWidgetOpen(false)
         }
     }
 
@@ -133,6 +136,13 @@ export const DashboardLayout = ({ children }) => {
                 </div>
             </div>
 
+            {/* Add Widget Modal */}
+            <AddWidgetModal
+                isOpen={isAddWidgetOpen}
+                onClose={() => setIsAddWidgetOpen(false)}
+                onAdd={handleAddWidget}
+            />
+
             {/* Main Content Area */}
             <div className="flex-1 p-8 overflow-y-auto relative">
                 {/* Background ambient gradient */}
@@ -164,7 +174,7 @@ export const DashboardLayout = ({ children }) => {
                                     <Presentation size={18} /> Present
                                 </button>
                                 <button
-                                    onClick={handleAddWidget}
+                                    onClick={() => setIsAddWidgetOpen(true)}
                                     className="px-5 py-2.5 bg-white text-black hover:bg-slate-200 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all hover:-translate-y-1 active:translate-y-0 active:scale-95"
                                 >
                                     + Add Widget
