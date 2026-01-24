@@ -656,8 +656,80 @@ export const useStore = create(persist((set, get) => ({
             console.error('Failed to save layout:', err)
             // Revert? For now, we just log.
         }
-    }
+    },
 
+    // Comments Slice
+    comments: {}, // { [noteId]: [Comment] }
+    loadingComments: false,
+
+    fetchComments: async (noteId) => {
+        if (!noteId) return
+        set({ loadingComments: true })
+        const { data, error } = await supabase
+            .from('comments')
+            .select('*, profiles(full_name, email)') // Join profiles to get user info
+            .eq('note_id', noteId)
+            .order('created_at', { ascending: true })
+
+        if (error) {
+            console.error('Error fetching comments:', error)
+        } else {
+            console.log('Fetched comments:', data)
+            set(state => ({
+                comments: {
+                    ...state.comments,
+                    [noteId]: data || []
+                },
+                loadingComments: false
+            }))
+        }
+    },
+
+    addComment: async (noteId, content) => {
+        const user = get().user
+        if (!user) return
+
+        const { data, error } = await supabase
+            .from('comments')
+            .insert({
+                note_id: noteId,
+                user_id: user.id,
+                content
+            })
+            .select('*, profiles(full_name, email)')
+            .single()
+
+        if (error) {
+            console.error('Error adding comment:', error)
+        } else if (data) {
+            set(state => ({
+                comments: {
+                    ...state.comments,
+                    [noteId]: [...(state.comments[noteId] || []), data]
+                }
+            }))
+        }
+    },
+
+    resolveComment: async (commentId, noteId) => {
+        const { error } = await supabase
+            .from('comments')
+            .update({ is_resolved: true })
+            .eq('id', commentId)
+
+        if (error) {
+            console.error('Error resolving comment:', error)
+        } else {
+            set(state => ({
+                comments: {
+                    ...state.comments,
+                    [noteId]: state.comments[noteId].map(c =>
+                        c.id === commentId ? { ...c, is_resolved: true } : c
+                    )
+                }
+            }))
+        }
+    }
 }), {
     name: 'potool-storage',
     partialize: (state) => ({

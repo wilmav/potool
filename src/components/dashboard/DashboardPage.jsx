@@ -3,6 +3,8 @@ import { DashboardLayout } from './DashboardLayout'
 import { useStore } from '../../store'
 import { Widget } from './Widget'
 import { NotesWidget, StatsWidget, CalendarWidget } from './widgets'
+import { PlanWidget } from './widgets/PlanWidget'
+import { PlanReaderModal } from './PlanReaderModal'
 import { Responsive } from 'react-grid-layout'
 
 // RGL Styles
@@ -56,6 +58,9 @@ const DashboardContent = ({ activeTabId }) => {
     const { dashboardTabs, updateDashboardLayout } = useStore()
     const activeTab = dashboardTabs.find(t => t.id === activeTabId)
 
+    // Reader Modal State
+    const [selectedPlan, setSelectedPlan] = useState(null)
+
     // Layout configuration
     // lg: 1200px (3 cols in old grid, let's say 12 cols in RGL for flexibility)
     // md: 996px
@@ -97,7 +102,15 @@ const DashboardContent = ({ activeTabId }) => {
     }))
 
     return (
-        <div className="min-h-[500px] text-white p-4 sm:p-10">
+        <div className="min-h-[500px] text-white p-4 sm:p-10 relative">
+
+            {selectedPlan && (
+                <PlanReaderModal
+                    note={selectedPlan}
+                    onClose={() => setSelectedPlan(null)}
+                />
+            )}
+
             {activeTab.widgets && activeTab.widgets.length > 0 ? (
                 <ResponsiveGridLayout
                     className="layout"
@@ -119,7 +132,7 @@ const DashboardContent = ({ activeTabId }) => {
                             h: widget.layout?.h || 4
                         }}>
                             <Widget
-                                title={getTitle(widget.type)}
+                                title={getTitle(widget.type, widget.config)}
                                 color={widget.config?.color || '#60a5fa'}
                                 {...widget.config}
                                 type={widget.type}
@@ -128,7 +141,14 @@ const DashboardContent = ({ activeTabId }) => {
                                 {widget.type === 'notes' && <NotesWidget />}
                                 {widget.type === 'calendar' && <CalendarWidget />}
                                 {widget.type === 'stats' && <StatsWidget />}
-                                {!['notes', 'calendar', 'stats'].includes(widget.type) && (
+                                {widget.type === 'plan_viewer' && (
+                                    <PlanWidget
+                                        id={widget.id}
+                                        data={widget}
+                                        onOpen={(note) => setSelectedPlan(note)}
+                                    />
+                                )}
+                                {!['notes', 'calendar', 'stats', 'plan_viewer'].includes(widget.type) && (
                                     <div className="flex items-center justify-center h-full text-slate-500">
                                         WIP: {widget.type}
                                     </div>
@@ -147,11 +167,12 @@ const DashboardContent = ({ activeTabId }) => {
 }
 
 // Helper to get friendly title if not set in config
-function getTitle(type) {
+function getTitle(type, config) {
     switch (type) {
         case 'notes': return 'Viimeisimmät'
         case 'stats': return 'Tilastot'
         case 'calendar': return 'Kalenteri'
+        case 'plan_viewer': return 'Suunnitelma'
         default: return type
     }
 }
