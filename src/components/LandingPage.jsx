@@ -6,27 +6,27 @@ export function LandingPage({ onLogin }) {
 
     const t = {
         hero: {
-            title: language === 'fi' ? 'Kaksikielinen, tekoälyavusteinen työkalu moderneille tuoteomistajille.' : 'The bilingual, AI-powered workspace for modern Product Owners.',
+            title: language === 'fi' ? 'Kaksikielinen, tekoälyä hyödyntävä työkalu tuoteomistajan arkeen.' : 'A bilingual, AI-assisted tool for everyday PO work.',
             subtitle: language === 'fi'
-                ? 'Keskeiset teemat tekevät valmistelusta selkeää ja johdonmukaista.'
-                : 'Key themes make preparation clear and consistent.',
+                ? 'Valmistele suunnitelmia suomeksi ja englanniksi yhdellä työkalulla.'
+                : 'Create plans in Finnish and English with a single tool.',
             login: language === 'fi' ? 'Kirjaudu sisään' : 'Log in'
         },
         features: {
             bilingual: {
-                title: language === 'fi' ? 'Aidosti kaksikielinen' : 'Truly Bilingual',
+                title: language === 'fi' ? 'Kaksikielinen käyttöliittymä ja sisältötyöskentely' : 'Bilingual interface and content workflow',
                 desc: language === 'fi'
-                    ? 'Vaihda suomen ja englannin välillä lennosta. Käännä sisältö tekoälyllä sekunneissa.'
-                    : 'Switch between Finnish and English instantly. Translate content with AI in seconds.'
+                    ? 'Vaihda suomen ja englannin välillä helposti. Käännä sisältö tekoälyllä sekunneissa.'
+                    : 'Switch between Finnish and English with ease. Translate content with AI in seconds.'
             },
             cloud: {
-                title: language === 'fi' ? 'Automaattinen tallennus' : 'Auto-Cloud Save',
+                title: language === 'fi' ? 'Sisällöt tallentuvat automaattisesti pilveen' : 'Automatic cloud saving',
                 desc: language === 'fi'
                     ? 'Kaikki muutokset tallentuvat pilveen reaaliajassa. Selaa versiohistoriaa ja palauta aiempi versio.'
                     : 'Changes sync to the cloud in real-time. Browse version history and restore anytime.'
             },
             templates: {
-                title: language === 'fi' ? 'Valmiit pohjat' : 'Smart Templates',
+                title: language === 'fi' ? 'Termikirjastosta apua rakenteeseen' : 'Support for structure from the terminology library',
                 desc: language === 'fi'
                     ? 'Kattava kirjasto yleisimmille PO-termeille ja hyödyllisille ilmauksille.'
                     : 'Curated library of common PO terms and sentence structures widely used in the industry.'
