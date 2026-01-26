@@ -9,6 +9,7 @@ The easiest way to deploy this project is via Cloudflare Pages with GitHub integ
     *   **Framework preset:** Vite (if available) or None.
     *   **Build command:** `npm run build`
     *   **Build output directory:** `dist`
+    *   **Deploy command:** (Jätä tyhjäksi / Leave empty)
 5.  **Environment Variables:** Add your `.env` variables (e.g., `VITE_SUPABASE_URL`) under **Settings** → **Functions** → **Environment variables**.
 6.  **Deploy:** Click **Save and Deploy**. Cloudflare will now automatically deploy every commit you push to GitHub!
 
