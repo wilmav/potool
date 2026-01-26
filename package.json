@@ -18,6 +18,7 @@
     "vite": "^7.2.4"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.7.4",
     "@supabase/supabase-js": "^2.91.0",
     "@tiptap/extension-color": "^3.16.0",
     "@tiptap/extension-image": "^3.17.0",

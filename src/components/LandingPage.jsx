@@ -78,7 +78,7 @@ export function LandingPage({ onLogin }) {
                         {language === 'fi' ? 'Uutta: Versiohistoria' : 'New: Version History'}
                     </div>
 
-                    <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">
+                    <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-8 pb-2 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">
                         {t.hero.title}
                     </h1>
 
