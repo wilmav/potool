@@ -557,6 +557,7 @@ export const useStore = create(persist((set, get) => ({
     loadingDashboards: false,
     activeDashboardId: null,
     dashboardTabs: [], // Tabs for the active dashboard (with nested widgets)
+    tabsLoadedForDashboardId: null, // Track which dashboard the tabs belong to
 
     fetchDashboards: async () => {
         set({ loadingDashboards: true })
@@ -576,7 +577,10 @@ export const useStore = create(persist((set, get) => ({
         try {
             const { DashboardService } = await import('./services/dashboardService')
             const tabs = await DashboardService.getDashboardDetails(dashboardId)
-            set({ dashboardTabs: tabs || [] })
+            set({
+                dashboardTabs: tabs || [],
+                tabsLoadedForDashboardId: dashboardId
+            })
         } catch (err) {
             console.error('Error loading dashboard details:', err)
         }

@@ -23,10 +23,10 @@ const BrowserTab = ({ title, isActive, color, onClick, onContextMenu, iconName, 
             onMouseEnter={(e) => handleTooltipEnter && handleTooltipEnter(e, `${language === 'fi' ? 'Välilehti' : 'Tab'}: ${title}`)}
             onMouseLeave={handleTooltipLeave}
             className={`
-                relative group flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all duration-300 ease-out
+                relative group flex items-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-300 ease-out whitespace-nowrap flex-shrink-0
                 ${isActive
-                    ? 'shadow-lg shadow-black/20 scale-105'
-                    : 'hover:bg-white/10 hover:scale-105 active:scale-95 opacity-70 hover:opacity-100'
+                    ? 'shadow-lg shadow-black/20'
+                    : 'hover:bg-white/10 opacity-70 hover:opacity-100'
                 }
             `}
             style={{
@@ -37,7 +37,7 @@ const BrowserTab = ({ title, isActive, color, onClick, onContextMenu, iconName, 
             <div className={`p-1 rounded-full ${isActive ? 'bg-black/10' : 'bg-white/10 group-hover:bg-white/20'}`}>
                 <Icon size={16} />
             </div>
-            <span>{title}</span>
+            <span className="text-sm">{title}</span>
         </button>
     )
 }
@@ -116,6 +116,18 @@ export const DashboardLayout = ({ children }) => {
             loadDashboard(dashboards[0].id)
         }
     }, [dashboards, activeDashboardId])
+
+    // DATA INTEGRITY CHECK:
+    // If we have an activeDashboardId (persisted) but the tabs in store
+    // don't match that dashboard (e.g. page reload), we must re-fetch.
+    const { tabsLoadedForDashboardId } = useStore()
+
+    useEffect(() => {
+        if (activeDashboardId && tabsLoadedForDashboardId !== activeDashboardId && !loadingDashboards) {
+            console.log('Tabs mismatch or missing for active dashboard, reloading...', activeDashboardId)
+            loadDashboard(activeDashboardId)
+        }
+    }, [activeDashboardId, tabsLoadedForDashboardId, loadingDashboards])
 
     // When dashboard tabs load, set active tab
     useEffect(() => {
@@ -360,27 +372,31 @@ export const DashboardLayout = ({ children }) => {
                 className={`
                     fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-4 transition-all duration-500 ease-in-out
                     ${isNavVisible || isPinned ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
+                    max-w-[95vw] md:max-w-[calc(100vw-450px)] lg:max-w-[calc(100vw-550px)]
                 `}
                 onMouseLeave={() => setIsNavVisible(false)}
             >
-                <div className="flex gap-2 p-1 bg-slate-950/90 border border-slate-800/80 rounded-full shadow-2xl backdrop-blur-3xl ring-1 ring-white/5">
-                    {/* Add Widget & Present (Moved here) */}
-                    <div className="flex items-center gap-1 px-1">
+                <div className="flex gap-2 p-1.5 bg-slate-950/90 border border-slate-800/80 rounded-full shadow-2xl backdrop-blur-3xl ring-1 ring-white/5 items-center justify-between">
+                    {/* Add Widget & Present */}
+                    <div className="flex items-center gap-1 px-1 flex-shrink-0">
                         <button
                             onClick={() => setIsAddWidgetOpen(true)}
-                            className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20"
+                            className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20 whitespace-nowrap"
                         >
-                            <Plus size={14} /> {language === 'fi' ? 'Lisää widget' : 'Add Widget'}
+                            <Plus size={14} /> <span className="hidden sm:inline">{language === 'fi' ? 'Lisää widget' : 'Add Widget'}</span>
                         </button>
-                        <button className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-wider transition-all border border-slate-700/50">
-                            <Presentation size={14} /> {language === 'fi' ? 'Esitä' : 'Present'}
+                        <button className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-wider transition-all border border-slate-700/50 whitespace-nowrap">
+                            <Presentation size={14} /> <span className="hidden sm:inline">{language === 'fi' ? 'Esitä' : 'Present'}</span>
                         </button>
                     </div>
 
-                    <div className="w-px h-5 bg-white/10 mx-1 self-center"></div>
+                    <div className="w-px h-5 bg-white/10 mx-1 self-center flex-shrink-0"></div>
 
-                    {/* Dashboard/Tab Switcher */}
-                    <div className="flex gap-1">
+                    {/* Dashboard/Tab Switcher - Scrollable Area */}
+                    <div
+                        className="flex gap-1 overflow-x-auto no-scrollbar max-w-[30vw] md:max-w-[40vw] lg:max-w-[500px] px-1"
+                        style={{ maskImage: 'linear-gradient(to right, transparent, black 16px, black 90%, transparent)' }}
+                    >
                         {dashboardTabs.map(tab => (
                             <BrowserTab
                                 key={tab.id}
@@ -397,10 +413,10 @@ export const DashboardLayout = ({ children }) => {
                         ))}
                     </div>
 
-                    <div className="w-px h-5 bg-white/10 mx-1 self-center"></div>
+                    <div className="w-px h-5 bg-white/10 mx-1 self-center flex-shrink-0"></div>
 
                     {/* Utility Controls */}
-                    <div className="flex items-center gap-1 pr-1">
+                    <div className="flex items-center gap-1 pr-1 flex-shrink-0">
                         <button
                             className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all"
                             title={language === 'fi' ? 'Uusi välilehti' : 'New Tab'}
