@@ -579,13 +579,17 @@ export const useStore = create(persist((set, get) => ({
             const tabs = await DashboardService.getDashboardDetails(dashboardId)
             set({
                 dashboardTabs: tabs || [],
-                tabsLoadedForDashboardId: dashboardId
+                tabsLoadedForDashboardId: dashboardId,
+                activeTabId: tabs && tabs.length > 0 ? tabs[0].id : null // Set first tab as active
             })
         } catch (err) {
             console.error('Error loading dashboard details:', err)
         }
         set({ loadingDashboards: false })
     },
+
+    activeTabId: null,
+    setActiveTabId: (id) => set({ activeTabId: id }),
 
     createDashboard: async (title) => {
         try {
@@ -600,6 +604,21 @@ export const useStore = create(persist((set, get) => ({
             get().loadDashboard(newDash.id)
         } catch (err) {
             console.error('Error creating dashboard:', err)
+        }
+    },
+
+    updateDashboard: async (dashboardId, updates) => {
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            await DashboardService.updateDashboard(dashboardId, updates)
+
+            set(state => ({
+                dashboards: state.dashboards.map(d =>
+                    d.id === dashboardId ? { ...d, ...updates } : d
+                )
+            }))
+        } catch (err) {
+            console.error('Error updating dashboard:', err)
         }
     },
 
@@ -721,6 +740,29 @@ export const useStore = create(persist((set, get) => ({
         } catch (err) {
             console.error('Failed to save layout:', err)
             // Revert? For now, we just log.
+        }
+    },
+
+    deleteWidget: async (widgetId) => {
+        const { dashboardTabs, activeTabId } = get()
+
+        // 1. Optimistic Update
+        const newTabs = dashboardTabs.map(tab => {
+            if (tab.id !== activeTabId) return tab
+            return {
+                ...tab,
+                widgets: tab.widgets.filter(w => w.id !== widgetId)
+            }
+        })
+        set({ dashboardTabs: newTabs })
+
+        // 2. Persist to DB
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            await DashboardService.deleteWidget(widgetId)
+        } catch (err) {
+            console.error('Failed to delete widget:', err)
+            // Revert would be nice here
         }
     },
 

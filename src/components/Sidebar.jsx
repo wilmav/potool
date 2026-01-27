@@ -213,7 +213,7 @@ export function Sidebar() {
                         }`}
                     title={language === 'fi' ? 'Kirjasto' : 'Library'}
                 >
-                    <CaseUpper className={`w-5 h-5 transition-colors ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`} />
+                    <span className={`text-[10px] font-black tracking-tighter ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`}>ABC</span>
                 </button>
                 <button
                     onClick={() => setView('plans')}

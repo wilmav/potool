@@ -61,7 +61,7 @@ export const NotesWidget = ({ onOpen }) => {
                     </div>
                 ) : (
                     <div className="space-y-2 pb-2">
-                        {filteredNotes.slice(0, 10).map((note) => (
+                        {filteredNotes.map((note) => (
                             <div
                                 key={note.id}
                                 onClick={() => handleNoteClick(note.id)}

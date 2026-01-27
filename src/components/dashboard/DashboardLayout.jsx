@@ -56,7 +56,8 @@ export const DashboardLayout = ({ children }) => {
         updateTab,
         deleteTab,
         addWidget,
-        fetchNotes
+        fetchNotes,
+        updateDashboard
     } = useStore()
 
 
@@ -68,9 +69,7 @@ export const DashboardLayout = ({ children }) => {
     // DashboardLayout has `const [activeTabId, setActiveTabId] = useState(null)` inside it in previous versions.
 
     // Let's stick to internal state for now as it was working, just ensuring it syncs.
-    const [internalActiveTabId, setInternalActiveTabId] = useState(null)
-
-    // Effect to sync internal state if needed, or just use it.
+    const [activeTabId, setActiveTabId] = [useStore(state => state.activeTabId), useStore(state => state.setActiveTabId)]
 
     const [isSwitcherOpen, setIsSwitcherOpen] = useState(false)
     const [activeTooltip, setActiveTooltip] = useState(null)
@@ -129,17 +128,17 @@ export const DashboardLayout = ({ children }) => {
         }
     }, [activeDashboardId, tabsLoadedForDashboardId, loadingDashboards])
 
-    // When dashboard tabs load, set active tab
+    // When dashboard tabs load, ensure sensitive active tab
     useEffect(() => {
         if (dashboardTabs.length > 0) {
-            const isTabInCurrent = dashboardTabs.find(t => t.id === internalActiveTabId)
-            if (!isTabInCurrent || !internalActiveTabId) {
-                setInternalActiveTabId(dashboardTabs[0].id)
+            const isTabInCurrent = dashboardTabs.find(t => t.id === activeTabId)
+            if (!isTabInCurrent || !activeTabId) {
+                setActiveTabId(dashboardTabs[0].id)
             }
         } else {
-            setInternalActiveTabId(null)
+            setActiveTabId(null)
         }
-    }, [dashboardTabs, internalActiveTabId]) // Added internalActiveTabId to dependency array
+    }, [dashboardTabs, activeTabId])
 
     const openInputModal = (title, placeholder, callback, initialValue = '') => {
         setInputModal({
@@ -197,8 +196,26 @@ export const DashboardLayout = ({ children }) => {
             label,
             '',
             (newTitle) => {
-                if (type === 'tab') updateTab(id, { title: newTitle })
-                // if(type === 'dashboard') updateDashboard(id, { title: newTitle }) // Needed store action
+                if (!newTitle.trim()) return
+
+                // Validation: Prevent duplicates
+                if (type === 'tab') {
+                    // Check if tab name exists in CURRENT dashboard (dashboardTabs)
+                    const duplicate = dashboardTabs.some(t => t.title.trim().toLowerCase() === newTitle.trim().toLowerCase() && t.id !== id)
+                    if (duplicate) {
+                        alert(language === 'fi' ? 'Tämän niminen välilehti on jo olemassa.' : 'A tab with this name already exists.')
+                        return
+                    }
+                    updateTab(id, { title: newTitle })
+                } else if (type === 'dashboard') {
+                    // Check unique dashboard title globally
+                    const duplicate = dashboards.some(d => d.title.trim().toLowerCase() === newTitle.trim().toLowerCase() && d.id !== id)
+                    if (duplicate) {
+                        alert(language === 'fi' ? 'Tämän niminen työtila on jo olemassa.' : 'A workspace with this name already exists.')
+                        return
+                    }
+                    updateDashboard(id, { title: newTitle })
+                }
             },
             title
         )
@@ -244,7 +261,7 @@ export const DashboardLayout = ({ children }) => {
     const handleTooltipLeave = () => setActiveTooltip(null)
 
     const currentDashboard = dashboards.find(d => d.id === activeDashboardId)
-    const currentTab = dashboardTabs.find(t => t.id === internalActiveTabId)
+    const currentTab = dashboardTabs.find(t => t.id === activeTabId)
 
     return (
         <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30 overflow-hidden relative" onClick={() => setContextMenu(null)}>
@@ -403,8 +420,8 @@ export const DashboardLayout = ({ children }) => {
                                 key={tab.id}
                                 title={tab.title}
                                 color={tab.color || '#60a5fa'}
-                                isActive={internalActiveTabId === tab.id}
-                                onClick={() => setInternalActiveTabId(tab.id)}
+                                isActive={activeTabId === tab.id}
+                                onClick={() => setActiveTabId(tab.id)}
                                 onContextMenu={(e) => onContextMenu(e, 'tab', tab.id, tab.title)}
                                 iconName={tab.is_present_friendly ? 'presentation' : 'grid'}
                                 language={language}
@@ -464,7 +481,7 @@ export const DashboardLayout = ({ children }) => {
                 {/* Background ambient gradient */}
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-slate-950 to-slate-950 pointer-events-none" />
 
-                {((loadingDashboards || (dashboardTabs.length > 0 && !internalActiveTabId)) && dashboardTabs.length === 0) ? (
+                {((loadingDashboards || (dashboardTabs.length > 0 && !activeTabId)) && dashboardTabs.length === 0) ? (
                     <div className="max-w-7xl mx-auto relative z-0 animate-pulse">
                         <div className="h-4 w-48 bg-slate-800 rounded-full mb-8"></div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -473,7 +490,7 @@ export const DashboardLayout = ({ children }) => {
                             ))}
                         </div>
                     </div>
-                ) : (loadingDashboards || (dashboardTabs.length > 0 && !internalActiveTabId)) ? (
+                ) : (loadingDashboards || (dashboardTabs.length > 0 && !activeTabId)) ? (
                     <div className="max-w-7xl mx-auto relative z-0 animate-pulse">
                         <div className="h-4 w-48 bg-slate-800 rounded-full mb-8 opacity-50"></div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -490,7 +507,7 @@ export const DashboardLayout = ({ children }) => {
                         {/* Content Rendering */}
                         <div className="min-h-[400px]">
                             {/* Pass activeTabId effectively to the child content */}
-                            {children ? React.cloneElement(children, { activeTabId: internalActiveTabId }) : (
+                            {children ? React.cloneElement(children, { activeTabId: activeTabId }) : (
                                 <div className="flex items-center justify-center h-64 border-2 border-dashed border-slate-700 rounded-3xl text-slate-200 bg-slate-900/50">
                                     No widgets configured yet.
                                 </div>

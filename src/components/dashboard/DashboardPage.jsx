@@ -56,7 +56,7 @@ export const DashboardPage = () => {
 }
 
 const DashboardContent = ({ activeTabId }) => {
-    const { dashboardTabs, updateDashboardLayout, loadingDashboards } = useStore()
+    const { dashboardTabs, updateDashboardLayout, loadingDashboards, deleteWidget, language } = useStore()
     const activeTab = dashboardTabs.find(t => t.id === activeTabId)
 
     // Reader Modal State
@@ -132,8 +132,65 @@ const DashboardContent = ({ activeTabId }) => {
         minH: 2
     }))
 
+    // Widget Delete Confirmation
+    const [widgetToDelete, setWidgetToDelete] = useState(null)
+
+    const handleDeleteWidget = (widgetId) => {
+        setWidgetToDelete(widgetId)
+    }
+
+    const confirmDeleteWidget = async () => {
+        if (widgetToDelete) {
+            await deleteWidget(widgetToDelete)
+            setWidgetToDelete(null)
+        }
+    }
+
+    // Confirmation Modal for Widget
+    const [confirmModalOpen, setConfirmModalOpen] = useState(false)
+    useEffect(() => {
+        setConfirmModalOpen(!!widgetToDelete)
+    }, [widgetToDelete])
+
+    // Reuse existing ConfirmationModal if possible, but we need to import it or recreate it?
+    // DashboardLayout has ConfirmationModal. We can import it from parent or reuse.
+    // Let's assume we can import it from shared location or DashboardLayout exports it?
+    // DashboardLayout exports { ConfirmationModal }. Let's check imports.
+    // DashboardLayout.jsx exports ConfirmationModal? No, it imports it.
+    // We need to import ConfirmationModal from './ConfirmationModal'.
+
     return (
         <div className="min-h-[500px] text-white p-4 sm:p-10 relative">
+
+            {/* Reuse ConfirmationModal component if imported, or creating a simple one here for now if not available easily */}
+            {widgetToDelete && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+                        <h3 className="text-lg font-bold text-white mb-2">
+                            {language === 'fi' ? 'Poista widget?' : 'Delete Widget?'}
+                        </h3>
+                        <p className="text-slate-400 text-sm mb-6">
+                            {language === 'fi'
+                                ? 'Haluatko varmasti poistaa tämän widgetin työtilasta?'
+                                : 'Are you sure you want to remove this widget from the workspace?'}
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setWidgetToDelete(null)}
+                                className="flex-1 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium transition-colors"
+                            >
+                                {language === 'fi' ? 'Peruuta' : 'Cancel'}
+                            </button>
+                            <button
+                                onClick={confirmDeleteWidget}
+                                className="flex-1 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-medium shadow-lg shadow-red-500/20 transition-colors"
+                            >
+                                {language === 'fi' ? 'Poista' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {selectedPlan && (
                 <PlanReaderModal
@@ -168,6 +225,7 @@ const DashboardContent = ({ activeTabId }) => {
                                 {...widget.config}
                                 type={widget.type}
                                 className="h-full"
+                                onDelete={() => handleDeleteWidget(widget.id)}
                             >
                                 {widget.type === 'notes' && (
                                     <NotesWidget
