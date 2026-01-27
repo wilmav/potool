@@ -86,7 +86,7 @@ const DashboardContent = ({ activeTabId }) => {
         updateDashboardLayout(updates)
     }
 
-    if (!activeTab) return null
+    if (!activeTab) return <div className="min-h-[500px]" /> // Stable height while loading
 
     // Prepare layout array for RGL
     // { i: 'id', x: 0, y: 0, w: 1, h: 1 }
@@ -138,7 +138,11 @@ const DashboardContent = ({ activeTabId }) => {
                                 type={widget.type}
                                 className="h-full"
                             >
-                                {widget.type === 'notes' && <NotesWidget />}
+                                {widget.type === 'notes' && (
+                                    <NotesWidget
+                                        onOpen={(note) => setSelectedPlan(note)}
+                                    />
+                                )}
                                 {widget.type === 'calendar' && <CalendarWidget />}
                                 {widget.type === 'stats' && <StatsWidget />}
                                 {widget.type === 'plan_viewer' && (

@@ -45,6 +45,7 @@ export const DashboardLayout = ({ children }) => {
         dashboards,
         activeDashboardId,
         dashboardTabs,
+        loadingDashboards,
         fetchDashboards,
         createDashboard,
         loadDashboard,
@@ -52,11 +53,6 @@ export const DashboardLayout = ({ children }) => {
         fetchNotes
     } = useStore()
 
-    console.log('DashboardLayout rendered', {
-        dashboardsCount: dashboards.length,
-        activeDashboardId,
-        dashboardTabsCount: dashboardTabs.length
-    })
 
     const [activeTabId, setActiveTabId] = useState(null)
     const [isSwitcherOpen, setIsSwitcherOpen] = useState(false)
@@ -87,12 +83,18 @@ export const DashboardLayout = ({ children }) => {
         }
     }, [dashboards, activeDashboardId])
 
-    // When dashboard tabs load, set active tab to first one if not set
+    // When dashboard tabs load, set active tab to first one
     useEffect(() => {
-        if (dashboardTabs.length > 0 && !activeTabId) {
-            setActiveTabId(dashboardTabs[0].id)
+        if (dashboardTabs.length > 0) {
+            // If current activeTabId is not in the new tabs, reset to first
+            const isTabInCurrent = dashboardTabs.find(t => t.id === activeTabId)
+            if (!isTabInCurrent || !activeTabId) {
+                setActiveTabId(dashboardTabs[0].id)
+            }
+        } else {
+            setActiveTabId(null)
         }
-    }, [dashboardTabs, activeTabId])
+    }, [dashboardTabs])
 
     const handleCreateDashboard = async () => {
         const title = prompt("Anna uudelle dashboardille nimi:")
@@ -306,7 +308,16 @@ export const DashboardLayout = ({ children }) => {
                 {/* Background ambient gradient */}
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-slate-950 to-slate-950 pointer-events-none" />
 
-                {currentDashboard ? (
+                {(loadingDashboards && dashboardTabs.length === 0) ? (
+                    <div className="max-w-7xl mx-auto relative z-0 animate-pulse">
+                        <div className="h-4 w-48 bg-slate-800 rounded-full mb-8"></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="h-64 bg-slate-900/50 rounded-3xl border border-slate-700/50"></div>
+                            ))}
+                        </div>
+                    </div>
+                ) : currentDashboard ? (
                     <div className="max-w-7xl mx-auto relative z-0">
                         {/* Header Area (Empty or minimal to reduce space) */}
                         <div className="mb-4"></div>
@@ -321,7 +332,7 @@ export const DashboardLayout = ({ children }) => {
                             )}
                         </div>
                     </div>
-                ) : (
+                ) : !loadingDashboards ? (
                     <div className="flex items-center justify-center h-full text-slate-300">
                         <div className="text-center p-8 bg-slate-900/50 rounded-3xl border border-slate-700/50 backdrop-blur-sm">
                             <h2 className="text-3xl font-bold mb-4 text-white !text-white drop-shadow-md">
@@ -338,7 +349,7 @@ export const DashboardLayout = ({ children }) => {
                             </button>
                         </div>
                     </div>
-                )}
+                ) : null}
             </div>
         </div>
     )
