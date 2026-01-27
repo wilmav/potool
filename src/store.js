@@ -795,6 +795,96 @@ export const useStore = create(persist((set, get) => ({
                 }
             }))
         }
+    },
+
+    // Files State
+    files: [],
+    loadingFiles: false,
+
+    fetchFiles: async () => {
+        const { user } = get()
+        if (!user) return
+
+        set({ loadingFiles: true })
+
+        // List files from storage
+        const { data, error } = await supabase.storage
+            .from('project_files')
+            .list(`${user.id}`, {
+                limit: 100,
+                offset: 0,
+                sortBy: { column: 'created_at', order: 'desc' },
+            })
+
+        if (error) {
+            console.error('Error fetching files:', error)
+        } else {
+            // Transform to useful objects
+            const fileList = data.map(file => ({
+                id: file.id,
+                name: file.name,
+                size: file.metadata?.size,
+                mimetype: file.metadata?.mimetype,
+                created_at: file.created_at,
+                // Construct path for operations
+                path: `${user.id}/${file.name}`
+            }))
+
+            set({ files: fileList })
+        }
+        set({ loadingFiles: false })
+    },
+
+    uploadFile: async (file) => {
+        const { user } = get()
+        if (!user) return
+
+        const fileExt = file.name.split('.').pop()
+        // Keep original name but prepend timestamp to avoid collisions if desired, 
+        // OR just keep original name and overwrite? Requirement didn't specify.
+        // Let's use original name but handle duplicate error or overwrite?
+        // Safe bet: `${Date.now()}_${file.name}`
+        const fileName = `${Date.now()}_${file.name}`
+        const filePath = `${user.id}/${fileName}`
+
+        const { error } = await supabase.storage
+            .from('project_files')
+            .upload(filePath, file)
+
+        if (error) {
+            console.error('Error uploading file:', error)
+            throw error
+        }
+
+        // Refresh list
+        await get().fetchFiles()
+    },
+
+    deleteFile: async (filePath) => {
+        const { error } = await supabase.storage
+            .from('project_files')
+            .remove([filePath])
+
+        if (error) {
+            console.error('Error deleting file:', error)
+            throw error
+        }
+
+        // Refresh list
+        await get().fetchFiles()
+    },
+
+    getDownloadUrl: async (filePath) => {
+        // Create signed url for private bucket
+        const { data, error } = await supabase.storage
+            .from('project_files')
+            .createSignedUrl(filePath, 60 * 60) // 1 hour
+
+        if (error) {
+            console.error('Error getting URL:', error)
+            return null
+        }
+        return data.signedUrl
     }
 }), {
     name: 'potool-storage',

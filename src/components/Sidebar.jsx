@@ -2,20 +2,63 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store'
 import { TrashBin } from './TrashBin'
-import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code, Trash2, X, Square, CheckSquare, MoreHorizontal, LayoutDashboard } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code, Trash2, X, Square, CheckSquare, MoreHorizontal, LayoutDashboard, CaseUpper, Folder, Upload, Download, File, Loader2 } from 'lucide-react'
 
 export function Sidebar() {
     const {
         language, bullets, loadingBullets,
         toggleBulletActive, hideBullet, unhideBullet, addToNote,
         notes, fetchNotes, loadNote, createNote, activeNoteId,
-        sidebarVersions, fetchSidebarVersions, restoreVersion, softDeleteNotes
+        sidebarVersions, fetchSidebarVersions, restoreVersion, softDeleteNotes,
+        files, loadingFiles, fetchFiles, uploadFile, deleteFile, getDownloadUrl
     } = useStore()
+
+    const [view, setView] = useState('library') // 'library' | 'plans'
+    const [searchTerm, setSearchTerm] = useState('')
+    const [expandedThemes, setExpandedThemes] = useState(new Set(['Discovery', 'Riskit', 'Ideointi', 'Määrittely']))
 
     const [isSelectionMode, setIsSelectionMode] = useState(false)
     const [selectedItems, setSelectedItems] = useState(new Set()) // Set<"note:id" | "version:id">
     const [showTrash, setShowTrash] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [fileToDelete, setFileToDelete] = useState(null)
+    const [uploading, setUploading] = useState(false)
+    const fileInputRef = useRef(null)
+
+    useEffect(() => {
+        if (view === 'files') {
+            fetchFiles()
+        }
+    }, [view])
+
+    const handleUpload = async (e) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+
+        setUploading(true)
+        try {
+            await uploadFile(file)
+        } catch (error) {
+            console.error(error)
+            alert(language === 'fi' ? 'Virhe latauksessa' : 'Upload failed')
+        }
+        setUploading(false)
+        if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+
+    const handleDownload = async (file) => {
+        const url = await getDownloadUrl(file.path)
+        if (url) {
+            window.open(url, '_blank')
+        }
+    }
+
+    const confirmDeleteFile = async () => {
+        if (fileToDelete) {
+            await deleteFile(fileToDelete.path)
+            setFileToDelete(null)
+        }
+    }
 
     const toggleSelection = (id, type, noteId = null) => {
         const key = `${type}:${id}`
@@ -88,9 +131,7 @@ export function Sidebar() {
         setExpandedNoteIds(newSet)
     }
 
-    const [view, setView] = useState('library') // 'library' | 'plans'
-    const [searchTerm, setSearchTerm] = useState('')
-    const [expandedThemes, setExpandedThemes] = useState(new Set(['Discovery', 'Riskit', 'Ideointi', 'Määrittely']))
+
 
     const { categoryColors, setCategoryColor, recentColors } = useStore() // Use categoryColors from store
     const [colorPickerOpen, setColorPickerOpen] = useState(null) // theme name
@@ -161,7 +202,7 @@ export function Sidebar() {
     return (
         <div className="flex flex-col h-full">
             {/* View Switcher */}
-            <div className="p-4 pb-0 grid grid-cols-3 gap-2">
+            <div className="p-4 pb-0 grid grid-cols-4 gap-2">
                 <button
                     onClick={() => setView('library')}
                     onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Kirjasto: Selaa ja poimi valmiita termejä' : 'Library: Browse and pick predefined terms')}
@@ -172,7 +213,7 @@ export function Sidebar() {
                         }`}
                     title={language === 'fi' ? 'Kirjasto' : 'Library'}
                 >
-                    <Layout className={`w-5 h-5 transition-colors ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`} />
+                    <CaseUpper className={`w-5 h-5 transition-colors ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`} />
                 </button>
                 <button
                     onClick={() => setView('plans')}
@@ -184,16 +225,28 @@ export function Sidebar() {
                         }`}
                     title={language === 'fi' ? 'Suunnitelmat' : 'My Plans'}
                 >
-                    <FolderOpen className={`w-5 h-5 transition-colors ${view === 'plans' ? 'text-white' : 'text-cyan-400 group-hover/nav:text-cyan-300'}`} />
+                    <FileText className={`w-5 h-5 transition-colors ${view === 'plans' ? 'text-white' : 'text-cyan-400 group-hover/nav:text-cyan-300'}`} />
+                </button>
+                <button
+                    onClick={() => setView('files')}
+                    onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Tiedostot: Projektin tiedostot' : 'Files: Project files')}
+                    onMouseLeave={handleTooltipLeave}
+                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav ${view === 'files'
+                        ? 'bg-slate-700/50 text-white ring-1 ring-slate-600/50'
+                        : 'bg-slate-800/80 text-slate-300 hover:text-indigo-200 hover:bg-indigo-900/40 border border-slate-700/50'
+                        }`}
+                    title={language === 'fi' ? 'Tiedostot' : 'Files'}
+                >
+                    <Folder className={`w-5 h-5 transition-colors ${view === 'files' ? 'text-white' : 'text-indigo-400 group-hover/nav:text-indigo-300'}`} />
                 </button>
                 <button
                     onClick={() => window.location.href = '/dashboard'}
                     onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Dashboard: Visuaalinen yleisnäkymä' : 'Dashboard: Visual overview')}
                     onMouseLeave={handleTooltipLeave}
-                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav border border-slate-700/50 bg-slate-800/80 text-slate-300 hover:text-indigo-200 hover:bg-indigo-900/40`}
+                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav border border-slate-700/50 bg-slate-800/80 text-slate-300 hover:text-amber-200 hover:bg-amber-900/40`}
                     title="Dashboard"
                 >
-                    <LayoutDashboard className="w-5 h-5 text-amber-500 group-hover/nav:text-indigo-400 transition-colors" />
+                    <LayoutDashboard className="w-5 h-5 text-amber-500 group-hover/nav:text-amber-400 transition-colors" />
                 </button>
             </div>
 
@@ -504,6 +557,74 @@ export function Sidebar() {
                         )}
                     </div>
                 )}
+
+                {view === 'files' && (
+                    <div className="flex flex-col h-full">
+                        <div className="mb-6">
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleUpload}
+                                className="hidden"
+                                accept=".pdf,.png,.jpg,.jpeg,.svg,.doc,.docx" // Add more as needed
+                            />
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-semibold shadow-lg shadow-indigo-500/20 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {uploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                                <span>{language === 'fi' ? 'Lataa tiedosto' : 'Upload File'}</span>
+                            </button>
+                        </div>
+
+                        <div className="space-y-2 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                            {loadingFiles ? (
+                                <div className="text-center py-10 text-slate-500 text-sm animate-pulse">
+                                    {language === 'fi' ? 'Ladataan...' : 'Loading...'}
+                                </div>
+                            ) : files.length === 0 ? (
+                                <div className="text-center py-10 text-slate-500 text-sm">
+                                    {language === 'fi' ? 'Ei tiedostoja.' : 'No files yet.'}
+                                </div>
+                            ) : (
+                                files.map(file => (
+                                    <div
+                                        key={file.id}
+                                        className="w-full rounded-xl border bg-slate-800/30 border-slate-700/30 hover:bg-slate-800 hover:border-slate-600 transition-all group relative p-3 flex items-center gap-3"
+                                    >
+                                        <div className="p-2 rounded-lg bg-indigo-500/20 text-indigo-300 shrink-0">
+                                            {/* Simple icon logic based on type could be added here */}
+                                            <File className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-sm text-slate-200 truncate" title={file.name}>{file.name}</h3>
+                                            <span className="text-xs text-slate-500 block">
+                                                {(file.size / 1024).toFixed(1)} KB • {new Date(file.created_at).toLocaleDateString()}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => handleDownload(file)}
+                                                className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                                                title={language === 'fi' ? 'Lataa' : 'Download'}
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => setFileToDelete(file)}
+                                                className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-900/20 rounded-lg transition-colors"
+                                                title={language === 'fi' ? 'Poista' : 'Delete'}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Trash Bin Modal */}
@@ -539,6 +660,39 @@ export function Sidebar() {
                             </button>
                             <button
                                 onClick={handleDeleteSelected}
+                                className="flex-1 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm shadow-lg shadow-rose-500/20 transition-colors"
+                            >
+                                {language === 'fi' ? 'Poista' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* File Delete Confirmation */}
+            {fileToDelete && (
+                <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur flex items-center justify-center p-6">
+                    <div className="bg-slate-800 border border-slate-700 p-6 rounded-xl max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-rose-500/20 mb-4 mx-auto">
+                            <Trash2 className="w-6 h-6 text-rose-500" />
+                        </div>
+                        <h3 className="text-lg font-bold text-white text-center mb-2">
+                            {language === 'fi' ? 'Poista tiedosto?' : 'Delete File?'}
+                        </h3>
+                        <p className="text-sm text-slate-400 text-center mb-6">
+                            {language === 'fi'
+                                ? `Haluatko varmasti poistaa tiedoston "${fileToDelete.name}"?`
+                                : `Are you sure you want to delete "${fileToDelete.name}"?`}
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setFileToDelete(null)}
+                                className="flex-1 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold text-sm transition-colors"
+                            >
+                                {language === 'fi' ? 'Peruuta' : 'Cancel'}
+                            </button>
+                            <button
+                                onClick={confirmDeleteFile}
                                 className="flex-1 py-2.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm shadow-lg shadow-rose-500/20 transition-colors"
                             >
                                 {language === 'fi' ? 'Poista' : 'Delete'}
