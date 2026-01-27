@@ -44,10 +44,6 @@ export function LandingPage({ onLogin }) {
                             <Layout className="w-6 h-6 text-white" />
                         </div>
                         <span className="font-bold text-xl tracking-tight text-slate-100">PO Tool</span>
-                        {/* Debug Badge */}
-                        <div className="hidden md:flex px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 rounded text-[10px] font-mono text-indigo-300">
-                            v0.1.0
-                        </div>
                     </div>
 
                     <div className="flex items-center gap-6">
