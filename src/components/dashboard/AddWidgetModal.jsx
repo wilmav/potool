@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { FileText, Calendar, BarChart2, X, Pin } from 'lucide-react'
+import { FileText, Calendar, BarChart2, X, Pin, StickyNote } from 'lucide-react'
 import { useStore } from '../../store'
 
 export const AddWidgetModal = ({ isOpen, onClose, onAdd }) => {
@@ -37,6 +37,13 @@ export const AddWidgetModal = ({ isOpen, onClose, onAdd }) => {
             description: 'Valitse yksi suunnitelma näkyväksi työpöydälle.',
             icon: Pin,
             color: 'orange'
+        },
+        {
+            id: 'sticky',
+            title: 'Muistilappu',
+            description: 'Nopea muistiinpano työpöydälle.',
+            icon: StickyNote,
+            color: 'yellow'
         }
     ]
 

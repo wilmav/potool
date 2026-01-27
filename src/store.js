@@ -715,6 +715,53 @@ export const useStore = create(persist((set, get) => ({
         }
     },
 
+    updateWidget: async (widgetId, updates) => {
+        const { dashboardTabs, activeTabId } = get()
+
+        // Find current widget to merge config if needed
+        let currentWidget = null
+        // Search in all tabs or just active? Widget ID should be unique.
+        // But dashboardTabs usually only has tabs for active dashboard.
+        for (const t of dashboardTabs) {
+            const w = t.widgets?.find(w => w.id === widgetId)
+            if (w) { currentWidget = w; break; }
+        }
+
+        if (!currentWidget) return
+
+        // Deep merge config if present in updates
+        let newConfig = currentWidget.config || {}
+        if (updates.config) {
+            newConfig = { ...newConfig, ...updates.config }
+        }
+
+        const finalUpdates = { ...updates, config: newConfig }
+
+        // 1. Optimistic Update
+        const newTabs = dashboardTabs.map(tab => {
+            // Check if widget is in this tab
+            if (!tab.widgets?.find(w => w.id === widgetId)) return tab
+
+            return {
+                ...tab,
+                widgets: tab.widgets.map(w =>
+                    w.id === widgetId
+                        ? { ...w, ...finalUpdates }
+                        : w
+                )
+            }
+        })
+        set({ dashboardTabs: newTabs })
+
+        // 2. Persist
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            await DashboardService.updateWidget(widgetId, finalUpdates)
+        } catch (err) {
+            console.error('Error updating widget:', err)
+        }
+    },
+
     updateDashboardLayout: async (layoutUpdates) => {
         // layoutUpdates: { [widgetId]: { x, y, w, h } }
         const { dashboardTabs, activeTabId } = get()

@@ -3,7 +3,7 @@ import { Layout } from 'lucide-react'
 import { DashboardLayout } from './DashboardLayout'
 import { useStore } from '../../store'
 import { Widget } from './Widget'
-import { NotesWidget, StatsWidget, CalendarWidget } from './widgets'
+import { NotesWidget, StatsWidget, CalendarWidget, StickiesWidget } from './widgets'
 import { PlanWidget } from './widgets/PlanWidget'
 import { PlanReaderModal } from './PlanReaderModal'
 import { Responsive } from 'react-grid-layout'
@@ -232,6 +232,12 @@ const DashboardContent = ({ activeTabId }) => {
                                         onOpen={(note) => setSelectedPlan(note)}
                                     />
                                 )}
+                                {widget.type === 'sticky' && (
+                                    <StickiesWidget
+                                        id={widget.id}
+                                        data={widget}
+                                    />
+                                )}
                                 {widget.type === 'calendar' && <CalendarWidget />}
                                 {widget.type === 'stats' && <StatsWidget />}
                                 {widget.type === 'plan_viewer' && (
@@ -265,6 +271,7 @@ function getTitle(type, config) {
         case 'notes': return 'Viimeisimmät'
         case 'stats': return 'Tilastot'
         case 'calendar': return 'Kalenteri'
+        case 'sticky': return 'Muistilappu'
         case 'plan_viewer': return 'Suunnitelma'
         default: return type
     }
