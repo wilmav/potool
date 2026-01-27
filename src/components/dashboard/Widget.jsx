@@ -30,7 +30,7 @@ export const Widget = forwardRef(({ className, style, onMouseDown, onMouseUp, on
                 </div>
 
                 {/* Main Content Area */}
-                <div className="flex-1 flex flex-col p-5 z-10 relative">
+                <div className="flex-1 flex flex-col p-5 z-10 relative min-h-0">
                     {/* Drag Handle Area */}
                     <div className="flex items-center justify-between mb-2">
                         <div className="widget-drag-handle flex-1 text-xs uppercase tracking-wider font-bold opacity-70 select-none cursor-move" style={{ color: color || '#fff' }}>
