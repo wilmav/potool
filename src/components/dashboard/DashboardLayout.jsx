@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useStore } from '../../store'
-import { Plus, Layout, Settings, Grid, Presentation, Hash, FileText, ChevronUp } from 'lucide-react'
+import { Plus, Layout, Settings, Grid, Presentation, Hash, FileText, ChevronUp, ChevronDown } from 'lucide-react'
 import { AddWidgetModal } from './AddWidgetModal' // New import
 
 // Helper to map icons string to Component
@@ -59,6 +59,7 @@ export const DashboardLayout = ({ children }) => {
     })
 
     const [activeTabId, setActiveTabId] = useState(null)
+    const [isSwitcherOpen, setIsSwitcherOpen] = useState(false)
     const [activeTooltip, setActiveTooltip] = useState(null)
     const [isNavVisible, setIsNavVisible] = useState(false)
     const [isPinned, setIsPinned] = useState(() => {
@@ -127,29 +128,77 @@ export const DashboardLayout = ({ children }) => {
                 <div className="flex items-center bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-full p-1 shadow-2xl">
                     <button
                         onClick={() => window.location.href = '/'}
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 hover:text-cyan-300 transition-colors"
+                        className="flex items-center justify-center w-8 h-8 rounded-full text-slate-400 hover:text-cyan-300 transition-colors hover:bg-slate-800/80 group"
+                        title={language === 'fi' ? 'Suunnittelu' : 'Planning'}
                     >
-                        <FileText size={12} className="text-cyan-500" />
-                        <span>Suunnittelu</span>
+                        <FileText size={16} className="text-cyan-500 group-hover:scale-110 transition-transform" />
                     </button>
-                    <div className="w-px h-3 bg-slate-700 mx-1"></div>
+                    <div className="w-px h-4 bg-slate-700 mx-1"></div>
                     <button
-                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-indigo-500/20 text-indigo-300"
+                        className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-800/50 text-slate-500 shadow-inner"
+                        title="Dashboard"
                     >
-                        <Layout size={12} className="text-indigo-400" />
-                        <span>Dash</span>
+                        <Layout size={16} className="text-slate-400" />
                     </button>
                 </div>
 
-                {/* Integrated Dashboard/Tab Name */}
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/40 backdrop-blur-sm border border-slate-700/30 rounded-full max-w-[200px] overflow-hidden">
-                    <div
-                        className="h-2 w-2 rounded-full shrink-0"
-                        style={{ backgroundColor: currentTab?.color || '#60a5fa' }}
-                    ></div>
-                    <span className="text-xs font-bold text-white truncate">
-                        {currentTab ? currentTab.title : currentDashboard?.title}
-                    </span>
+                {/* Switcher Dropdown */}
+                <div className="relative">
+                    <button
+                        onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
+                        className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-full max-w-[200px] overflow-hidden hover:bg-slate-800 hover:border-slate-600 transition-all group ${isSwitcherOpen ? 'ring-2 ring-indigo-500/30' : ''}`}
+                    >
+                        <div
+                            className="h-2 w-2 rounded-full shrink-0"
+                            style={{ backgroundColor: currentTab?.color || '#60a5fa' }}
+                        ></div>
+                        <span className="text-xs font-bold text-white truncate">
+                            {currentDashboard ? currentDashboard.title : (language === 'fi' ? 'Valitse...' : 'Select...')}
+                        </span>
+                        <ChevronDown size={12} className={`text-slate-500 transition-transform duration-200 ${isSwitcherOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    {isSwitcherOpen && (
+                        <>
+                            {/* Backdrop to close */}
+                            <div
+                                className="fixed inset-0 z-[105]"
+                                onClick={() => setIsSwitcherOpen(false)}
+                            />
+                            <div className="absolute top-full left-0 mt-2 w-64 bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl py-2 z-[110] animate-in fade-in zoom-in-95 duration-200">
+                                <div className="px-3 py-1 mb-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                                    {language === 'fi' ? 'Työtilat' : 'Workspaces'}
+                                </div>
+                                <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
+                                    {dashboards.map(dash => (
+                                        <button
+                                            key={dash.id}
+                                            onClick={() => {
+                                                loadDashboard(dash.id)
+                                                setIsSwitcherOpen(false)
+                                            }}
+                                            className={`w-full text-left px-4 py-2.5 text-xs transition-colors hover:bg-slate-800 flex items-center justify-between ${dash.id === activeDashboardId ? 'text-indigo-400 font-bold bg-indigo-500/10' : 'text-slate-300'}`}
+                                        >
+                                            <span className="truncate">{dash.title}</span>
+                                            {dash.id === activeDashboardId && <div className="h-1.5 w-1.5 rounded-full bg-indigo-400" />}
+                                        </button>
+                                    ))}
+                                </div>
+                                <div className="h-px bg-slate-700/50 my-1 mx-2"></div>
+                                <button
+                                    onClick={() => {
+                                        const title = prompt(language === 'fi' ? 'Dashboardin nimi:' : 'Dashboard name:')
+                                        if (title) createDashboard(title)
+                                        setIsSwitcherOpen(false)
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-xs text-indigo-400 hover:bg-indigo-500/10 flex items-center gap-2"
+                                >
+                                    <Plus size={14} />
+                                    {language === 'fi' ? 'Uusi Dashboard' : 'New Dashboard'}
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 

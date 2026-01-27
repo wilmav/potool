@@ -166,37 +166,34 @@ export function Sidebar() {
                     onClick={() => setView('library')}
                     onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Kirjasto: Selaa ja poimi valmiita termejä' : 'Library: Browse and pick predefined terms')}
                     onMouseLeave={handleTooltipLeave}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all group/nav ${view === 'library'
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/40'
+                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav ${view === 'library'
+                        ? 'bg-slate-700/50 text-white ring-1 ring-slate-600/50'
                         : 'bg-slate-800/80 text-slate-300 hover:text-emerald-200 hover:bg-emerald-900/40 border border-slate-700/50'
                         }`}
                     title={language === 'fi' ? 'Kirjasto' : 'Library'}
                 >
-                    <Layout className={`w-4 h-4 transition-colors ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`} />
-                    <span className="hidden sm:inline lg:hidden xl:inline">{language === 'fi' ? 'Kirjasto' : 'Library'}</span>
+                    <Layout className={`w-5 h-5 transition-colors ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`} />
                 </button>
                 <button
                     onClick={() => setView('plans')}
                     onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Suunnitelmat: Hallitse omia suunnitelmiasi' : 'Plans: Manage your own plans')}
                     onMouseLeave={handleTooltipLeave}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all group/nav ${view === 'plans'
-                        ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/40'
+                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav ${view === 'plans'
+                        ? 'bg-slate-700/50 text-white ring-1 ring-slate-600/50'
                         : 'bg-slate-800/80 text-slate-300 hover:text-cyan-200 hover:bg-cyan-900/40 border border-slate-700/50'
                         }`}
                     title={language === 'fi' ? 'Suunnitelmat' : 'My Plans'}
                 >
-                    <FolderOpen className={`w-4 h-4 transition-colors ${view === 'plans' ? 'text-white' : 'text-cyan-400 group-hover/nav:text-cyan-300'}`} />
-                    <span className="hidden sm:inline lg:hidden xl:inline">{language === 'fi' ? 'Suunnitelmat' : 'Plans'}</span>
+                    <FolderOpen className={`w-5 h-5 transition-colors ${view === 'plans' ? 'text-white' : 'text-cyan-400 group-hover/nav:text-cyan-300'}`} />
                 </button>
                 <button
                     onClick={() => window.location.href = '/dashboard'}
                     onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Dashboard: Visuaalinen yleisnäkymä' : 'Dashboard: Visual overview')}
                     onMouseLeave={handleTooltipLeave}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all group/nav border border-slate-700/50 bg-slate-800/80 text-slate-300 hover:text-amber-200 hover:bg-amber-900/40`}
+                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav border border-slate-700/50 bg-slate-800/80 text-slate-300 hover:text-indigo-200 hover:bg-indigo-900/40`}
                     title="Dashboard"
                 >
-                    <LayoutDashboard className="w-4 h-4 text-amber-500 group-hover/nav:text-amber-300 transition-colors" />
-                    <span className="hidden sm:inline lg:hidden xl:inline">Dash</span>
+                    <LayoutDashboard className="w-5 h-5 text-amber-500 group-hover/nav:text-indigo-400 transition-colors" />
                 </button>
             </div>
 
