@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useStore } from '../../store'
-import { Plus, Layout, Settings, Grid, Presentation, Hash } from 'lucide-react'
+import { Plus, Layout, Settings, Grid, Presentation, Hash, FileText, ChevronUp } from 'lucide-react'
 import { AddWidgetModal } from './AddWidgetModal' // New import
 
 // Helper to map icons string to Component
@@ -11,12 +11,14 @@ const IconMap = {
     'hash': Hash
 }
 
-const BrowserTab = ({ title, isActive, color, onClick, iconName }) => {
+const BrowserTab = ({ title, isActive, color, onClick, iconName, language, handleTooltipEnter, handleTooltipLeave }) => {
     const Icon = IconMap[iconName] || Grid
 
     return (
         <button
             onClick={onClick}
+            onMouseEnter={(e) => handleTooltipEnter && handleTooltipEnter(e, `${language === 'fi' ? 'Välilehti' : 'Tab'}: ${title}`)}
+            onMouseLeave={handleTooltipLeave}
             className={`
                 relative group flex items-center gap-2 px-5 py-2.5 rounded-full font-medium transition-all duration-300 ease-out
                 ${isActive
@@ -39,13 +41,15 @@ const BrowserTab = ({ title, isActive, color, onClick, iconName }) => {
 
 export const DashboardLayout = ({ children }) => {
     const {
+        language,
         dashboards,
         activeDashboardId,
         dashboardTabs,
         fetchDashboards,
         createDashboard,
         loadDashboard,
-        addWidget
+        addWidget,
+        fetchNotes
     } = useStore()
 
     console.log('DashboardLayout rendered', {
@@ -55,12 +59,24 @@ export const DashboardLayout = ({ children }) => {
     })
 
     const [activeTabId, setActiveTabId] = useState(null)
+    const [activeTooltip, setActiveTooltip] = useState(null)
+    const [isNavVisible, setIsNavVisible] = useState(false)
+    const [isPinned, setIsPinned] = useState(() => {
+        return localStorage.getItem('dash_nav_pinned') === 'true'
+    })
+
+    const togglePin = () => {
+        const next = !isPinned
+        setIsPinned(next)
+        localStorage.setItem('dash_nav_pinned', next)
+    }
 
     // Initial load
     useEffect(() => {
         if (dashboards.length === 0) {
             fetchDashboards()
         }
+        fetchNotes() // Ensure notes are available for widget modal
     }, [])
 
     // If we have dashboards but no active one, load the first one
@@ -86,55 +102,148 @@ export const DashboardLayout = ({ children }) => {
 
     const [isAddWidgetOpen, setIsAddWidgetOpen] = useState(false)
 
-    const handleAddWidget = (type) => {
+    const handleAddWidget = (type, config) => {
         if (type) {
-            addWidget(type.toLowerCase())
+            addWidget(type.toLowerCase(), config)
             setIsAddWidgetOpen(false)
         }
     }
+
+    const handleTooltipEnter = (e, content) => {
+        if (!content) return
+        const rect = e.currentTarget.getBoundingClientRect()
+        setActiveTooltip({ content, rect })
+    }
+    const handleTooltipLeave = () => setActiveTooltip(null)
 
     const currentDashboard = dashboards.find(d => d.id === activeDashboardId)
     const currentTab = dashboardTabs.find(t => t.id === activeTabId)
 
     return (
-        <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30">
+        <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30 overflow-hidden relative">
 
-            {/* Top Navigation Bar (Floating Island) */}
-            <div className="flex justify-center pt-6 pb-2 relative z-10">
-                <div className="flex gap-2 p-1.5 bg-slate-900/80 border border-slate-700/50 rounded-full shadow-2xl backdrop-blur-xl">
-
-                    {/* Dashboard/Tab Switcher Logic - For now showing Tabs of current dashboard */}
-                    {dashboardTabs.map(tab => (
-                        <BrowserTab
-                            key={tab.id}
-                            title={tab.title}
-                            color={tab.color || '#60a5fa'} // Default blue
-                            isActive={activeTabId === tab.id}
-                            onClick={() => setActiveTabId(tab.id)}
-                            iconName={tab.is_present_friendly ? 'presentation' : 'grid'}
-                        />
-                    ))}
-
-                    <div className="w-px h-6 bg-white/10 mx-2 self-center"></div>
-
-                    {/* Add Tab Button (Mockup for now) */}
+            {/* Fixed Navigation Area (Top Left) */}
+            <div className="fixed top-4 left-8 z-[100] flex items-center gap-3">
+                <div className="flex items-center bg-slate-900/80 backdrop-blur-md border border-slate-700/50 rounded-full p-1 shadow-2xl">
                     <button
-                        className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all hover:rotate-90"
-                        title="Create new tab"
-                        onClick={() => alert("Tab creation coming soon!")}
+                        onClick={() => window.location.href = '/'}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400 hover:text-cyan-300 transition-colors"
                     >
-                        <Plus size={20} />
+                        <FileText size={12} className="text-cyan-500" />
+                        <span>Suunnittelu</span>
                     </button>
-                    <div className="w-px h-6 bg-white/10 mx-2 self-center"></div>
+                    <div className="w-px h-3 bg-slate-700 mx-1"></div>
                     <button
-                        className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all"
-                        title="Switch Dashboard"
-                        onClick={handleCreateDashboard}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.1em] bg-indigo-500/20 text-indigo-300"
                     >
-                        <Layout size={20} />
+                        <Layout size={12} className="text-indigo-400" />
+                        <span>Dash</span>
                     </button>
                 </div>
+
+                {/* Integrated Dashboard/Tab Name */}
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/40 backdrop-blur-sm border border-slate-700/30 rounded-full max-w-[200px] overflow-hidden">
+                    <div
+                        className="h-2 w-2 rounded-full shrink-0"
+                        style={{ backgroundColor: currentTab?.color || '#60a5fa' }}
+                    ></div>
+                    <span className="text-xs font-bold text-white truncate">
+                        {currentTab ? currentTab.title : currentDashboard?.title}
+                    </span>
+                </div>
             </div>
+
+            {/* Top Reveal Zone */}
+            <div
+                className="fixed top-0 left-0 w-full h-8 z-50"
+                onMouseEnter={() => setIsNavVisible(true)}
+            />
+
+            {/* Top Navigation Bar (Floating Island) */}
+            <div
+                className={`
+                    fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-4 transition-all duration-500 ease-in-out
+                    ${isNavVisible || isPinned ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
+                `}
+                onMouseLeave={() => setIsNavVisible(false)}
+            >
+                <div className="flex gap-2 p-1 bg-slate-950/90 border border-slate-800/80 rounded-full shadow-2xl backdrop-blur-3xl ring-1 ring-white/5">
+                    {/* Add Widget & Present (Moved here) */}
+                    <div className="flex items-center gap-1 px-1">
+                        <button
+                            onClick={() => setIsAddWidgetOpen(true)}
+                            className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold uppercase tracking-wider transition-all shadow-lg shadow-indigo-500/20"
+                        >
+                            <Plus size={14} /> {language === 'fi' ? 'Lisää widget' : 'Add Widget'}
+                        </button>
+                        <button className="h-8 px-3 flex items-center gap-1.5 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-bold uppercase tracking-wider transition-all border border-slate-700/50">
+                            <Presentation size={14} /> {language === 'fi' ? 'Esitä' : 'Present'}
+                        </button>
+                    </div>
+
+                    <div className="w-px h-5 bg-white/10 mx-1 self-center"></div>
+
+                    {/* Dashboard/Tab Switcher */}
+                    <div className="flex gap-1">
+                        {dashboardTabs.map(tab => (
+                            <BrowserTab
+                                key={tab.id}
+                                title={tab.title}
+                                color={tab.color || '#60a5fa'}
+                                isActive={activeTabId === tab.id}
+                                onClick={() => setActiveTabId(tab.id)}
+                                iconName={tab.is_present_friendly ? 'presentation' : 'grid'}
+                                language={language}
+                                handleTooltipEnter={handleTooltipEnter}
+                                handleTooltipLeave={handleTooltipLeave}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="w-px h-5 bg-white/10 mx-1 self-center"></div>
+
+                    {/* Utility Controls */}
+                    <div className="flex items-center gap-1 pr-1">
+                        <button
+                            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+                            title={language === 'fi' ? 'Uusi välilehti' : 'New Tab'}
+                            onClick={() => alert("Tab creation coming soon!")}
+                        >
+                            <Plus size={16} />
+                        </button>
+
+                        <button
+                            className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all"
+                            title={language === 'fi' ? 'Vaihda dashboardia' : 'Switch Dashboard'}
+                            onClick={handleCreateDashboard}
+                        >
+                            <Settings size={16} />
+                        </button>
+
+                        {/* Pin Button */}
+                        <button
+                            onClick={togglePin}
+                            className={`h-8 w-8 flex items-center justify-center rounded-full transition-all ${isPinned ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
+                            title={isPinned ? (language === 'fi' ? 'Vapauta' : 'Unpin') : (language === 'fi' ? 'Kiinnitä' : 'Pin')}
+                        >
+                            <Grid size={16} className={isPinned ? 'rotate-45' : ''} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Portal Tooltip */}
+            {activeTooltip && (
+                <div
+                    className="fixed z-[9999] bg-slate-900 border border-slate-700 p-2 rounded-lg shadow-xl pointer-events-none text-xs text-white"
+                    style={{
+                        top: activeTooltip.rect.bottom + 10,
+                        left: activeTooltip.rect.left + (activeTooltip.rect.width / 2) - 10,
+                    }}
+                >
+                    {activeTooltip.content}
+                </div>
+            )}
 
             {/* Add Widget Modal */}
             <AddWidgetModal
@@ -144,43 +253,14 @@ export const DashboardLayout = ({ children }) => {
             />
 
             {/* Main Content Area */}
-            <div className="flex-1 p-8 overflow-y-auto relative">
+            <div className="flex-1 pt-4 px-8 pb-8 overflow-y-auto relative">
                 {/* Background ambient gradient */}
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-slate-950 to-slate-950 pointer-events-none" />
 
                 {currentDashboard ? (
                     <div className="max-w-7xl mx-auto relative z-0">
-                        {/* Header Area */}
-                        <div className="flex justify-between items-center mb-10">
-                            <div className="flex items-center gap-4">
-                                <div className="box-content p-1 border-2 border-slate-700 rounded-full">
-                                    <div
-                                        className="h-3 w-3 rounded-full"
-                                        style={{ backgroundColor: currentTab?.color || '#60a5fa' }}
-                                    ></div>
-                                </div>
-                                <div>
-                                    <h1 className="text-4xl font-bold tracking-tight text-white">
-                                        {currentTab ? currentTab.title : currentDashboard.title}
-                                    </h1>
-                                    <p className="text-slate-300 mt-1 text-sm font-medium">
-                                        {currentDashboard.title} • Updated just now
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="flex gap-3">
-                                <button className="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 rounded-xl text-sm font-bold transition-all border border-slate-700/50 flex gap-2 items-center hover:shadow-lg active:scale-95 text-slate-300">
-                                    <Presentation size={18} /> Present
-                                </button>
-                                <button
-                                    onClick={() => setIsAddWidgetOpen(true)}
-                                    className="px-5 py-2.5 bg-white text-black hover:bg-slate-200 rounded-xl text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.15)] transition-all hover:-translate-y-1 active:translate-y-0 active:scale-95"
-                                >
-                                    + Add Widget
-                                </button>
-                            </div>
-                        </div>
+                        {/* Header Area (Empty or minimal to reduce space) */}
+                        <div className="mb-4"></div>
 
                         {/* Content Rendering */}
                         <div className="min-h-[400px]">

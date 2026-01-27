@@ -58,7 +58,7 @@ export const useStore = create(persist((set, get) => ({
 
     // Note State
     noteContent: '',
-    noteTitle: 'Untitled Plan',
+    noteTitle: '', // Start empty, placeholder will handle it
     noteSummary: '', // NEW: Summary field
     activeNoteId: null,
     notes: [], // List of available notes { id, title, updated_at ... }

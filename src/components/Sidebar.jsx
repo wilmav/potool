@@ -164,32 +164,38 @@ export function Sidebar() {
             <div className="p-4 pb-0 grid grid-cols-3 gap-2">
                 <button
                     onClick={() => setView('library')}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === 'library'
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                        : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Kirjasto: Selaa ja poimi valmiita termejä' : 'Library: Browse and pick predefined terms')}
+                    onMouseLeave={handleTooltipLeave}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all group/nav ${view === 'library'
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/40'
+                        : 'bg-slate-800/80 text-slate-300 hover:text-emerald-200 hover:bg-emerald-900/40 border border-slate-700/50'
                         }`}
                     title={language === 'fi' ? 'Kirjasto' : 'Library'}
                 >
-                    <Layout className="w-4 h-4" />
+                    <Layout className={`w-4 h-4 transition-colors ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`} />
                     <span className="hidden sm:inline lg:hidden xl:inline">{language === 'fi' ? 'Kirjasto' : 'Library'}</span>
                 </button>
                 <button
                     onClick={() => setView('plans')}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all ${view === 'plans'
-                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                        : 'bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                    onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Suunnitelmat: Hallitse omia suunnitelmiasi' : 'Plans: Manage your own plans')}
+                    onMouseLeave={handleTooltipLeave}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all group/nav ${view === 'plans'
+                        ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/40'
+                        : 'bg-slate-800/80 text-slate-300 hover:text-cyan-200 hover:bg-cyan-900/40 border border-slate-700/50'
                         }`}
                     title={language === 'fi' ? 'Suunnitelmat' : 'My Plans'}
                 >
-                    <FolderOpen className="w-4 h-4" />
+                    <FolderOpen className={`w-4 h-4 transition-colors ${view === 'plans' ? 'text-white' : 'text-cyan-400 group-hover/nav:text-cyan-300'}`} />
                     <span className="hidden sm:inline lg:hidden xl:inline">{language === 'fi' ? 'Suunnitelmat' : 'Plans'}</span>
                 </button>
                 <button
                     onClick={() => window.location.href = '/dashboard'}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all bg-slate-800/50 text-slate-400 hover:text-slate-200 hover:bg-slate-800`}
+                    onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Dashboard: Visuaalinen yleisnäkymä' : 'Dashboard: Visual overview')}
+                    onMouseLeave={handleTooltipLeave}
+                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-semibold transition-all group/nav border border-slate-700/50 bg-slate-800/80 text-slate-300 hover:text-amber-200 hover:bg-amber-900/40`}
                     title="Dashboard"
                 >
-                    <LayoutDashboard className="w-4 h-4" />
+                    <LayoutDashboard className="w-4 h-4 text-amber-500 group-hover/nav:text-amber-300 transition-colors" />
                     <span className="hidden sm:inline lg:hidden xl:inline">Dash</span>
                 </button>
             </div>
@@ -396,7 +402,7 @@ export function Sidebar() {
                                                     )}
                                                     <div className="min-w-0 flex-1 text-left">
                                                         <h3 className={`font-semibold text-sm truncate pr-2 ${activeNoteId === note.id ? 'text-indigo-100' : 'text-slate-200 group-hover:text-white'}`}>
-                                                            {note.title || (language === 'fi' ? 'Nimetön' : 'Untitled')}
+                                                            {note.title || (language === 'fi' ? 'Nimetön suunnitelma' : 'Untitled Plan')}
                                                         </h3>
                                                         <span className="text-xs text-slate-500 truncate block">
                                                             {new Date(note.updated_at).toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-US', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} {new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
