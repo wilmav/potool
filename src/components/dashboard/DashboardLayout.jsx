@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react'
 import { useStore } from '../../store'
 import { Plus, Layout, Settings, Grid, Presentation, Hash, FileText, ChevronUp, ChevronDown } from 'lucide-react'
 import { AddWidgetModal } from './AddWidgetModal' // New import
+import { InputModal } from './InputModal'
+import { ConfirmationModal } from './ConfirmationModal'
 
 // Helper to map icons string to Component
 const IconMap = {
@@ -11,12 +13,13 @@ const IconMap = {
     'hash': Hash
 }
 
-const BrowserTab = ({ title, isActive, color, onClick, iconName, language, handleTooltipEnter, handleTooltipLeave }) => {
+const BrowserTab = ({ title, isActive, color, onClick, onContextMenu, iconName, language, handleTooltipEnter, handleTooltipLeave }) => {
     const Icon = IconMap[iconName] || Grid
 
     return (
         <button
             onClick={onClick}
+            onContextMenu={onContextMenu}
             onMouseEnter={(e) => handleTooltipEnter && handleTooltipEnter(e, `${language === 'fi' ? 'Välilehti' : 'Tab'}: ${title}`)}
             onMouseLeave={handleTooltipLeave}
             className={`
@@ -28,7 +31,7 @@ const BrowserTab = ({ title, isActive, color, onClick, iconName, language, handl
             `}
             style={{
                 backgroundColor: isActive ? color : 'transparent',
-                color: isActive ? '#000' : '#e2e8f0', // Dark text on active, slate-200 on inactive
+                color: isActive ? '#000' : '#e2e8f0',
             }}
         >
             <div className={`p-1 rounded-full ${isActive ? 'bg-black/10' : 'bg-white/10 group-hover:bg-white/20'}`}>
@@ -49,17 +52,48 @@ export const DashboardLayout = ({ children }) => {
         fetchDashboards,
         createDashboard,
         loadDashboard,
+        createTab,
+        updateTab,
+        deleteTab,
         addWidget,
         fetchNotes
     } = useStore()
 
 
-    const [activeTabId, setActiveTabId] = useState(null)
+    // const [activeTabId, setActiveTabId] = useState(null) <-- activeTabId comes from parent mostly now, but DashboardPage manages layout actually?
+    // Wait, DashboardPage renders DashboardLayout but logic for activeTab set is inside Layout?
+    // Actually DashboardPage passes activeTabId? No, DashboardPage RECEIVES it if we lift state up?
+    // Looking at DashboardPage code: DashboardLayout wraps DashboardContent. DashboardContent receives nothing?
+    // Ah, previous code had `children` logic. DashboardPage renders `<DashboardLayout><DashboardContent /></DashboardLayout>`
+    // DashboardLayout has `const [activeTabId, setActiveTabId] = useState(null)` inside it in previous versions.
+
+    // Let's stick to internal state for now as it was working, just ensuring it syncs.
+    const [internalActiveTabId, setInternalActiveTabId] = useState(null)
+
+    // Effect to sync internal state if needed, or just use it.
+
     const [isSwitcherOpen, setIsSwitcherOpen] = useState(false)
     const [activeTooltip, setActiveTooltip] = useState(null)
     const [isNavVisible, setIsNavVisible] = useState(false)
     const [isPinned, setIsPinned] = useState(() => {
-        return localStorage.getItem('dash_nav_pinned') === 'true'
+        try { return localStorage.getItem('dash_nav_pinned') === 'true' } catch { return false }
+    })
+
+    // Modal States
+    const [inputModal, setInputModal] = useState({
+        isOpen: false,
+        title: '',
+        placeholder: '',
+        initialValue: '',
+        onSubmit: () => { }
+    })
+
+    const [confirmModal, setConfirmModal] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        isDangerous: false
     })
 
     const togglePin = () => {
@@ -73,7 +107,7 @@ export const DashboardLayout = ({ children }) => {
         if (dashboards.length === 0) {
             fetchDashboards()
         }
-        fetchNotes() // Ensure notes are available for widget modal
+        fetchNotes()
     }, [])
 
     // If we have dashboards but no active one, load the first one
@@ -83,25 +117,103 @@ export const DashboardLayout = ({ children }) => {
         }
     }, [dashboards, activeDashboardId])
 
-    // When dashboard tabs load, set active tab to first one
+    // When dashboard tabs load, set active tab
     useEffect(() => {
         if (dashboardTabs.length > 0) {
-            // If current activeTabId is not in the new tabs, reset to first
-            const isTabInCurrent = dashboardTabs.find(t => t.id === activeTabId)
-            if (!isTabInCurrent || !activeTabId) {
-                setActiveTabId(dashboardTabs[0].id)
+            const isTabInCurrent = dashboardTabs.find(t => t.id === internalActiveTabId)
+            if (!isTabInCurrent || !internalActiveTabId) {
+                setInternalActiveTabId(dashboardTabs[0].id)
             }
         } else {
-            setActiveTabId(null)
+            setInternalActiveTabId(null)
         }
-    }, [dashboardTabs])
+    }, [dashboardTabs, internalActiveTabId]) // Added internalActiveTabId to dependency array
 
-    const handleCreateDashboard = async () => {
-        const title = prompt("Anna uudelle dashboardille nimi:")
-        if (title) {
-            await createDashboard(title)
-        }
+    const openInputModal = (title, placeholder, callback, initialValue = '') => {
+        setInputModal({
+            isOpen: true,
+            title,
+            placeholder,
+            initialValue,
+            onSubmit: (value) => {
+                callback(value)
+                setInputModal(prev => ({ ...prev, isOpen: false }))
+            }
+        })
     }
+
+    const handleCreateDashboard = () => {
+        openInputModal(
+            language === 'fi' ? 'Luo uusi työtila' : 'Create New Workspace',
+            language === 'fi' ? 'Työtilan nimi...' : 'Workspace name...',
+            (title) => createDashboard(title)
+        )
+    }
+
+    const handleCreateTab = () => {
+        if (!activeDashboardId) return
+        openInputModal(
+            language === 'fi' ? 'Luo uusi välilehti' : 'Create New Tab',
+            language === 'fi' ? 'Välilehden nimi...' : 'Tab name...',
+            (title) => createTab(activeDashboardId, title)
+        )
+    }
+
+    const [contextMenu, setContextMenu] = useState(null) // { x, y, type, id, title }
+
+    const onContextMenu = (e, type, id, title) => {
+        e.preventDefault()
+        setContextMenu({
+            x: e.clientX,
+            y: e.clientY,
+            type, // 'tab' or 'dashboard'
+            id,
+            title
+        })
+    }
+
+    const handleRename = () => {
+        if (!contextMenu) return
+        const { type, id, title } = contextMenu
+        setContextMenu(null)
+
+        const label = type === 'tab'
+            ? (language === 'fi' ? 'Nimeä välilehti' : 'Rename Tab')
+            : (language === 'fi' ? 'Nimeä työtila' : 'Rename Workspace')
+
+        openInputModal(
+            label,
+            '',
+            (newTitle) => {
+                if (type === 'tab') updateTab(id, { title: newTitle })
+                // if(type === 'dashboard') updateDashboard(id, { title: newTitle }) // Needed store action
+            },
+            title
+        )
+    }
+
+    const handleDelete = () => {
+        if (!contextMenu) return
+        const { type, id, title } = contextMenu
+        setContextMenu(null)
+
+        setConfirmModal({
+            isOpen: true,
+            title: language === 'fi' ? `Poista ${type === 'tab' ? 'välilehti' : 'työtila'}?` : `Delete ${type === 'tab' ? 'Tab' : 'Workspace'}?`,
+            message: language === 'fi'
+                ? `Haluatko varmasti poistaa "${title}"? Tätä toimintoa ei voi peruuttaa.`
+                : `Are you sure you want to delete "${title}"? This cannot be undone.`,
+            confirmText: language === 'fi' ? 'Poista' : 'Delete',
+            cancelText: language === 'fi' ? 'Peruuta' : 'Cancel',
+            isDangerous: true,
+            onConfirm: () => {
+                if (type === 'tab') deleteTab(id)
+                else if (type === 'dashboard') { /* deleteDashboard(id) */ }
+                setConfirmModal(prev => ({ ...prev, isOpen: false }))
+            }
+        })
+    }
+
 
     const [isAddWidgetOpen, setIsAddWidgetOpen] = useState(false)
 
@@ -120,10 +232,50 @@ export const DashboardLayout = ({ children }) => {
     const handleTooltipLeave = () => setActiveTooltip(null)
 
     const currentDashboard = dashboards.find(d => d.id === activeDashboardId)
-    const currentTab = dashboardTabs.find(t => t.id === activeTabId)
+    const currentTab = dashboardTabs.find(t => t.id === internalActiveTabId)
 
     return (
-        <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30 overflow-hidden relative">
+        <div className="flex flex-col h-full bg-slate-950 text-slate-100 font-sans selection:bg-indigo-500/30 overflow-hidden relative" onClick={() => setContextMenu(null)}>
+
+            <InputModal
+                isOpen={inputModal.isOpen}
+                onClose={() => setInputModal(prev => ({ ...prev, isOpen: false }))}
+                title={inputModal.title}
+                placeholder={inputModal.placeholder}
+                initialValue={inputModal.initialValue}
+                onSubmit={inputModal.onSubmit}
+            />
+
+            <ConfirmationModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                {...confirmModal}
+            />
+
+            {/* Context Menu */}
+            {contextMenu && (
+                <div
+                    className="fixed z-[9999] bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 w-40 overflow-hidden animate-in fade-in duration-100"
+                    style={{ top: contextMenu.y, left: contextMenu.x }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <div className="px-3 py-2 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-800 mb-1">
+                        {contextMenu.type === 'tab' ? (language === 'fi' ? 'Välilehti' : 'Tab') : 'Workspace'}
+                    </div>
+                    <button
+                        onClick={handleRename}
+                        className="w-full text-left px-4 py-2 text-sm text-slate-300 hover:bg-indigo-600 hover:text-white transition-colors"
+                    >
+                        {language === 'fi' ? 'Nimeä uudelleen' : 'Rename'}
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-red-600 hover:text-white transition-colors"
+                    >
+                        {language === 'fi' ? 'Poista' : 'Delete'}
+                    </button>
+                </div>
+            )}
 
             {/* Fixed Navigation Area (Top Left) */}
             <div className="fixed top-4 left-8 z-[100] flex items-center gap-3">
@@ -138,7 +290,7 @@ export const DashboardLayout = ({ children }) => {
                     <div className="w-px h-4 bg-slate-700 mx-1"></div>
                     <button
                         className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-800/50 text-slate-500 shadow-inner"
-                        title="Dashboard"
+                        title="Workspaces"
                     >
                         <Layout size={16} className="text-slate-400" />
                     </button>
@@ -150,10 +302,6 @@ export const DashboardLayout = ({ children }) => {
                         onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
                         className={`flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 backdrop-blur-md border border-slate-700/50 rounded-full max-w-[200px] overflow-hidden hover:bg-slate-800 hover:border-slate-600 transition-all group ${isSwitcherOpen ? 'ring-2 ring-indigo-500/30' : ''}`}
                     >
-                        <div
-                            className="h-2 w-2 rounded-full shrink-0"
-                            style={{ backgroundColor: currentTab?.color || '#60a5fa' }}
-                        ></div>
                         <span className="text-xs font-bold text-white truncate">
                             {currentDashboard ? currentDashboard.title : (language === 'fi' ? 'Valitse...' : 'Select...')}
                         </span>
@@ -179,6 +327,7 @@ export const DashboardLayout = ({ children }) => {
                                                 loadDashboard(dash.id)
                                                 setIsSwitcherOpen(false)
                                             }}
+                                            onContextMenu={(e) => onContextMenu(e, 'dashboard', dash.id, dash.title)}
                                             className={`w-full text-left px-4 py-2.5 text-xs transition-colors hover:bg-slate-800 flex items-center justify-between ${dash.id === activeDashboardId ? 'text-indigo-400 font-bold bg-indigo-500/10' : 'text-slate-300'}`}
                                         >
                                             <span className="truncate">{dash.title}</span>
@@ -188,15 +337,11 @@ export const DashboardLayout = ({ children }) => {
                                 </div>
                                 <div className="h-px bg-slate-700/50 my-1 mx-2"></div>
                                 <button
-                                    onClick={() => {
-                                        const title = prompt(language === 'fi' ? 'Dashboardin nimi:' : 'Dashboard name:')
-                                        if (title) createDashboard(title)
-                                        setIsSwitcherOpen(false)
-                                    }}
+                                    onClick={handleCreateDashboard}
                                     className="w-full text-left px-4 py-2 text-xs text-indigo-400 hover:bg-indigo-500/10 flex items-center gap-2"
                                 >
                                     <Plus size={14} />
-                                    {language === 'fi' ? 'Uusi Dashboard' : 'New Dashboard'}
+                                    {language === 'fi' ? 'Uusi työtila' : 'New Workspace'}
                                 </button>
                             </div>
                         </>
@@ -241,8 +386,9 @@ export const DashboardLayout = ({ children }) => {
                                 key={tab.id}
                                 title={tab.title}
                                 color={tab.color || '#60a5fa'}
-                                isActive={activeTabId === tab.id}
-                                onClick={() => setActiveTabId(tab.id)}
+                                isActive={internalActiveTabId === tab.id}
+                                onClick={() => setInternalActiveTabId(tab.id)}
+                                onContextMenu={(e) => onContextMenu(e, 'tab', tab.id, tab.title)}
                                 iconName={tab.is_present_friendly ? 'presentation' : 'grid'}
                                 language={language}
                                 handleTooltipEnter={handleTooltipEnter}
@@ -258,7 +404,7 @@ export const DashboardLayout = ({ children }) => {
                         <button
                             className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-white/10 text-slate-400 hover:text-white transition-all"
                             title={language === 'fi' ? 'Uusi välilehti' : 'New Tab'}
-                            onClick={() => alert("Tab creation coming soon!")}
+                            onClick={handleCreateTab}
                         >
                             <Plus size={16} />
                         </button>
@@ -296,24 +442,26 @@ export const DashboardLayout = ({ children }) => {
                 </div>
             )}
 
-            {/* Add Widget Modal */}
-            <AddWidgetModal
-                isOpen={isAddWidgetOpen}
-                onClose={() => setIsAddWidgetOpen(false)}
-                onAdd={handleAddWidget}
-            />
-
             {/* Main Content Area */}
             <div className="flex-1 pt-4 px-8 pb-8 overflow-y-auto relative">
                 {/* Background ambient gradient */}
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/10 via-slate-950 to-slate-950 pointer-events-none" />
 
-                {(loadingDashboards && dashboardTabs.length === 0) ? (
+                {((loadingDashboards || (dashboardTabs.length > 0 && !internalActiveTabId)) && dashboardTabs.length === 0) ? (
                     <div className="max-w-7xl mx-auto relative z-0 animate-pulse">
                         <div className="h-4 w-48 bg-slate-800 rounded-full mb-8"></div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {[1, 2, 3].map(i => (
                                 <div key={i} className="h-64 bg-slate-900/50 rounded-3xl border border-slate-700/50"></div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (loadingDashboards || (dashboardTabs.length > 0 && !internalActiveTabId)) ? (
+                    <div className="max-w-7xl mx-auto relative z-0 animate-pulse">
+                        <div className="h-4 w-48 bg-slate-800 rounded-full mb-8 opacity-50"></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {[1, 2].map(i => (
+                                <div key={i} className="h-64 bg-slate-800/20 rounded-3xl border border-slate-700/30"></div>
                             ))}
                         </div>
                     </div>
@@ -325,7 +473,7 @@ export const DashboardLayout = ({ children }) => {
                         {/* Content Rendering */}
                         <div className="min-h-[400px]">
                             {/* Pass activeTabId effectively to the child content */}
-                            {children ? React.cloneElement(children, { activeTabId }) : (
+                            {children ? React.cloneElement(children, { activeTabId: internalActiveTabId }) : (
                                 <div className="flex items-center justify-center h-64 border-2 border-dashed border-slate-700 rounded-3xl text-slate-200 bg-slate-900/50">
                                     No widgets configured yet.
                                 </div>
@@ -351,6 +499,12 @@ export const DashboardLayout = ({ children }) => {
                     </div>
                 ) : null}
             </div>
+
+            <AddWidgetModal
+                isOpen={isAddWidgetOpen}
+                onClose={() => setIsAddWidgetOpen(false)}
+                onAdd={handleAddWidget}
+            />
         </div>
     )
 }

@@ -599,6 +599,68 @@ export const useStore = create(persist((set, get) => ({
         }
     },
 
+    createTab: async (dashboardId, title) => {
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            // Default color/index
+            await DashboardService.createTab(dashboardId, title, 0, '#60a5fa')
+
+            // Refresh dashboard to show new tab
+            get().loadDashboard(dashboardId)
+        } catch (err) {
+            console.error('Error creating tab:', err)
+        }
+    },
+
+    updateTab: async (tabId, updates) => {
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            await DashboardService.updateTab(tabId, updates)
+
+            // Update local state
+            set(state => ({
+                dashboardTabs: state.dashboardTabs.map(t =>
+                    t.id === tabId ? { ...t, ...updates } : t
+                )
+            }))
+        } catch (err) {
+            console.error('Error updating tab:', err)
+        }
+    },
+
+    deleteTab: async (tabId) => {
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            await DashboardService.deleteTab(tabId)
+
+            // Update local state
+            const { activeTabId } = get()
+            set(state => ({
+                dashboardTabs: state.dashboardTabs.filter(t => t.id !== tabId),
+                // If we deleted the active tab, clear selection or fallback will handle it
+                activeTabId: activeTabId === tabId ? null : activeTabId
+            }))
+        } catch (err) {
+            console.error('Error deleting tab:', err)
+        }
+    },
+
+    deleteDashboard: async (dashboardId) => {
+        try {
+            const { DashboardService } = await import('./services/dashboardService')
+            await DashboardService.deleteDashboard(dashboardId)
+
+            set(state => ({
+                dashboards: state.dashboards.filter(d => d.id !== dashboardId),
+                activeDashboardId: state.activeDashboardId === dashboardId
+                    ? (state.dashboards.find(d => d.id !== dashboardId)?.id || null)
+                    : state.activeDashboardId
+            }))
+        } catch (err) {
+            console.error('Error deleting dashboard:', err)
+        }
+    },
+
     addWidget: async (type, config = {}) => {
         const { activeDashboardId, dashboardTabs, activeTabId } = get()
         // If no active tab, try to find the first one or return

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { Layout } from 'lucide-react'
 import { DashboardLayout } from './DashboardLayout'
 import { useStore } from '../../store'
 import { Widget } from './Widget'
@@ -55,23 +56,17 @@ export const DashboardPage = () => {
 }
 
 const DashboardContent = ({ activeTabId }) => {
-    const { dashboardTabs, updateDashboardLayout } = useStore()
+    const { dashboardTabs, updateDashboardLayout, loadingDashboards } = useStore()
     const activeTab = dashboardTabs.find(t => t.id === activeTabId)
 
     // Reader Modal State
     const [selectedPlan, setSelectedPlan] = useState(null)
 
     // Layout configuration
-    // lg: 1200px (3 cols in old grid, let's say 12 cols in RGL for flexibility)
-    // md: 996px
-    // sm: 768px
-    // xs: 480px
     const breakpoints = { lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }
     const cols = { lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }
 
     const onLayoutChange = (layout, layouts) => {
-        // Collect updates
-        // RGL returns array of objects {i, x, y, w, h}
         const updates = {}
         layout.forEach(item => {
             updates[item.i] = {
@@ -81,12 +76,48 @@ const DashboardContent = ({ activeTabId }) => {
                 h: item.h
             }
         })
-
-        // Optimistic update
         updateDashboardLayout(updates)
     }
 
-    if (!activeTab) return <div className="min-h-[500px]" /> // Stable height while loading
+    // 1. Loading State
+    if (loadingDashboards && dashboardTabs.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <div className="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+                <p className="text-slate-400 font-medium animate-pulse">Ladataan työtilaa...</p>
+            </div>
+        )
+    }
+
+    // 2. No Tabs State
+    if (dashboardTabs.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-400 bg-slate-900/30 rounded-3xl border-2 border-dashed border-slate-800 p-8 shadow-2xl">
+                <div className="bg-indigo-500/10 p-6 rounded-3xl mb-6 ring-1 ring-indigo-500/20">
+                    <Layout className="w-12 h-12 text-indigo-400" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-3">Tämä työtila on vielä tyhjä</h3>
+                <p className="text-slate-400 text-center max-w-sm mb-8 leading-relaxed">
+                    Dashboardit koostuvat <b>välilehdistä</b> (kuten sivut kirjassa).
+                    Lisää ensimmäinen välilehti yläpalkin <span className="text-indigo-400 font-bold">+</span> painikkeesta.
+                </p>
+                <div className="flex gap-4 text-xs font-mono opacity-50 uppercase tracking-widest">
+                    <span>1. Välilehti (Sivu)</span>
+                    <span>→</span>
+                    <span>2. Widgetit (Sisältö)</span>
+                </div>
+            </div>
+        )
+    }
+
+    // 3. Tab selected but widgets missing / loading activeTab
+    if (!activeTab) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[400px]">
+                <div className="w-8 h-8 border-2 border-slate-700 border-t-slate-400 rounded-full animate-spin"></div>
+            </div>
+        )
+    }
 
     // Prepare layout array for RGL
     // { i: 'id', x: 0, y: 0, w: 1, h: 1 }
