@@ -164,7 +164,7 @@ const DashboardContent = ({ activeTabId }) => {
 
             {/* Reuse ConfirmationModal component if imported, or creating a simple one here for now if not available easily */}
             {widgetToDelete && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={(e) => e.stopPropagation()}>
                     <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
                         <h3 className="text-lg font-bold text-white mb-2">
                             {language === 'fi' ? 'Poista widget?' : 'Delete Widget?'}

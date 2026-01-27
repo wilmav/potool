@@ -562,9 +562,11 @@ export const useStore = create(persist((set, get) => ({
     fetchDashboards: async () => {
         set({ loadingDashboards: true })
         try {
+            console.log('Fetching dashboards...')
             // Lazy import to avoid circular dep issues if any, though service is clean
             const { DashboardService } = await import('./services/dashboardService')
             const data = await DashboardService.getDashboards()
+            console.log('Fetched dashboards:', data)
             set({ dashboards: data || [] })
         } catch (err) {
             console.error('Error fetching dashboards:', err)

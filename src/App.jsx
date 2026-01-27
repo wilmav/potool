@@ -10,15 +10,7 @@ import DashboardPlaceholder from './components/dashboard/DashboardPlaceholder'
 import { Layout, Globe, LogOut, Sparkles, ChevronLeft, ChevronRight, GripVertical } from 'lucide-react'
 
 function App() {
-    // Prototype Route
-    if (window.location.pathname === '/dashboard-demo') {
-        return <DashboardPlaceholder />
-    }
-    // Real Dashboard Route
-    if (window.location.pathname === '/dashboard') {
-        return <DashboardPage />
-        // return <div className="p-10 text-white">Dashboard Temporarily Disabled for Debugging</div>
-    }
+    // Early route checks removed to allow auth to init
 
     const { language, setLanguage, user, setUser, fetchBullets, activeNoteId, saveNote } = useStore()
     const [loadingAuth, setLoadingAuth] = useState(true)
@@ -83,6 +75,16 @@ function App() {
 
     if (loadingAuth) {
         return <div className="h-screen w-screen bg-slate-950 flex items-center justify-center text-slate-500">{language === 'fi' ? 'Ladataan...' : 'Loading...'}</div>
+    }
+
+    // Routes that require auth or handled differently
+    if (window.location.pathname === '/dashboard-demo') {
+        return <DashboardPlaceholder />
+    }
+    if (window.location.pathname === '/dashboard') {
+        // Protected route
+        if (!user) return <LandingPage onLogin={() => setView('login')} />
+        return <DashboardPage />
     }
 
     if (!user) {

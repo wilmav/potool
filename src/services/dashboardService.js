@@ -27,6 +27,28 @@ export const DashboardService = {
         return data
     },
 
+    async updateDashboard(dashboardId, updates) {
+        const { data, error } = await supabase
+            .from('dashboards')
+            .update(updates)
+            .eq('id', dashboardId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    },
+
+    async deleteDashboard(dashboardId) {
+        const { error } = await supabase
+            .from('dashboards')
+            .delete()
+            .eq('id', dashboardId)
+
+        if (error) throw error
+        return true
+    },
+
     async getDashboardDetails(dashboardId) {
         // Fetch tabs and widgets for a dashboard
         const { data: tabs, error: tabsError } = await supabase
@@ -54,7 +76,39 @@ export const DashboardService = {
         return data
     },
 
+    async updateTab(tabId, updates) {
+        const { data, error } = await supabase
+            .from('dashboard_tabs')
+            .update(updates)
+            .eq('id', tabId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    },
+
+    async deleteTab(tabId) {
+        const { error } = await supabase
+            .from('dashboard_tabs')
+            .delete()
+            .eq('id', tabId)
+
+        if (error) throw error
+        return true
+    },
+
     // Widgets
+    async deleteWidget(widgetId) {
+        const { error } = await supabase
+            .from('widgets')
+            .delete()
+            .eq('id', widgetId)
+
+        if (error) throw error
+        return true
+    },
+
     async createWidget(tabId, type, layout = {}, config = {}) {
         const { data, error } = await supabase
             .from('widgets')

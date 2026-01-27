@@ -44,6 +44,7 @@ const BrowserTab = ({ title, isActive, color, onClick, onContextMenu, iconName, 
 
 export const DashboardLayout = ({ children }) => {
     const {
+        user, // Added
         language,
         dashboards,
         activeDashboardId,
@@ -103,11 +104,11 @@ export const DashboardLayout = ({ children }) => {
 
     // Initial load
     useEffect(() => {
-        if (dashboards.length === 0) {
+        if (user) {
             fetchDashboards()
+            fetchNotes()
         }
-        fetchNotes()
-    }, [])
+    }, [user])
 
     // If we have dashboards but no active one, load the first one
     useEffect(() => {

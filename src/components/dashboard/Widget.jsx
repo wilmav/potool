@@ -17,23 +17,32 @@ export const Widget = forwardRef(({ className, style, onMouseDown, onMouseUp, on
             onTouchEnd={onTouchEnd}
             {...props}
         >
-            <div className={`h-full bg-slate-900/50 backdrop-blur-sm rounded-3xl p-5 border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-slate-600 transition-all duration-300 flex flex-col gap-3 group relative overflow-hidden`}>
+            <div className={`h-full bg-slate-900/50 backdrop-blur-sm rounded-3xl border border-slate-700/50 shadow-xl hover:shadow-2xl hover:border-slate-600 transition-all duration-300 flex flex-col relative group`}>
 
-                {/* Drag Handle Area */}
-                <div className="widget-drag-handle flex items-center justify-between text-xs uppercase tracking-wider font-bold opacity-70 mb-2 select-none cursor-move">
-                    <span style={{ color: color || '#fff' }}>{title || type}</span>
-                    <SettingsMenu onDelete={onDelete} language={language} />
-                </div>
-
-                <div className="flex-1 overflow-auto custom-scrollbar relative z-10">
-                    {children}
-                </div>
-
-                {/* Decorative background gradient */}
+                {/* Decorative background gradient - Manually rounded to match parent */}
                 <div
-                    className="absolute inset-0 opacity-5 pointer-events-none"
-                    style={{ background: `radial-gradient(circle at top right, ${color || '#fff'}, transparent 70%)` }}
-                />
+                    className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none z-0"
+                >
+                    <div
+                        className="absolute inset-0 opacity-5"
+                        style={{ background: `radial-gradient(circle at top right, ${color || '#fff'}, transparent 70%)` }}
+                    />
+                </div>
+
+                {/* Main Content Area */}
+                <div className="flex-1 flex flex-col p-5 z-10 relative">
+                    {/* Drag Handle Area */}
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="widget-drag-handle flex-1 text-xs uppercase tracking-wider font-bold opacity-70 select-none cursor-move" style={{ color: color || '#fff' }}>
+                            {title || type}
+                        </div>
+                        <SettingsMenu onDelete={onDelete} language={language} />
+                    </div>
+
+                    <div className="flex-1 overflow-auto custom-scrollbar">
+                        {children}
+                    </div>
+                </div>
             </div>
         </div>
     )
@@ -67,7 +76,7 @@ const SettingsMenu = ({ onDelete, language }) => {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 top-full mt-1 w-32 bg-slate-800 border border-slate-700/50 rounded-lg shadow-xl py-1 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="absolute right-0 top-full mt-1 w-32 bg-slate-900 border border-slate-700 rounded-lg shadow-2xl py-1 z-[100] animate-in fade-in zoom-in-95 duration-100 ring-1 ring-black/50">
                     <button
                         onClick={(e) => {
                             e.stopPropagation()
