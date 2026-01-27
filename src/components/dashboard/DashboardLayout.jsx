@@ -371,8 +371,9 @@ export const DashboardLayout = ({ children }) => {
             <div
                 className={`
                     fixed top-0 left-1/2 -translate-x-1/2 z-50 pt-4 transition-all duration-500 ease-in-out
-                    ${isNavVisible || isPinned ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
-                    max-w-[95vw] md:max-w-[calc(100vw-450px)] lg:max-w-[calc(100vw-550px)]
+                    ${(isNavVisible || isPinned) && currentDashboard ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0'}
+                    max-w-[95vw] md:max-w-[calc(100vw-450px)] lg:max-w-[calc(100vw-550px)] 
+                    ${!currentDashboard ? 'pointer-events-none' : ''}
                 `}
                 onMouseLeave={() => setIsNavVisible(false)}
             >
