@@ -586,6 +586,14 @@ export const useStore = create(persist((set, get) => ({
             })
         } catch (err) {
             console.error('Error loading dashboard details:', err)
+            // Prevent infinite loop by marking this dashboard as "loaded" (even if failed)
+            // or by resetting activeDashboardId if it's invalid.
+            // For now, let's mark it as loaded with empty tabs so UI shows empty state instead of looping.
+            set({
+                dashboardTabs: [],
+                tabsLoadedForDashboardId: dashboardId,
+                activeTabId: null
+            })
         }
         set({ loadingDashboards: false })
     },
