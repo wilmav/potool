@@ -200,6 +200,7 @@ function App() {
             <main className="flex-1 flex flex-col h-full overflow-hidden bg-slate-950 relative">
                 <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/5 via-slate-950 to-slate-950 pointer-events-none" />
                 <NoteEditor
+                    key={activeNoteId}
                     onLogout={handleLogout}
                     isSidebarOpen={isSidebarOpen}
                     onOpenSidebar={() => setIsSidebarOpen(true)}

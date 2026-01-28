@@ -39,6 +39,14 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     // Toggle between Visual (Tiptap) and Source (HTML Textarea)
     const [isSourceMode, setIsSourceMode] = useState(false)
 
+    // Local title state to ensure immediate UI updates and fix sync issues
+    const [title, setTitle] = useState(noteTitle)
+
+    // Sync local title when store title changes (e.g. on load/create)
+    useEffect(() => {
+        setTitle(noteTitle)
+    }, [noteTitle])
+
     // Removed local recentColors state
     const [customColor, setCustomColor] = useState('#ffffff')
 
@@ -90,6 +98,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         }
     }, [noteTitle, notes, activeNoteId, language])
 
+    const textareaRef = useRef(null)
     const translateMenuRef = useRef(null)
     const exportMenuRef = useRef(null)
     const historyMenuRef = useRef(null)
@@ -198,28 +207,17 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     // Only update editor if the content in store is DIFFERENT and we didn't just type it.
     // However, keeping it simple: triggering on ID change is the safest for now.
 
-    const lastSyncedNoteId = useRef(activeNoteId)
+    const lastSyncedNoteId = useRef(null)
 
-    // Sync Title when Active Note Changes
+
+
+
     useEffect(() => {
-        // If we have an active note, and it's different from the one we last synced OR we have no sync record
-        // we should update the local title state to match the active note.
-        if (activeNoteId && notes) {
-            // Check if we switched notes
-            if (activeNoteId !== lastSyncedNoteId.current) {
-                const currentNote = notes.find(n => n.id === activeNoteId)
-                if (currentNote) {
-                    setNoteTitle(currentNote.title)
-                    lastSyncedNoteId.current = activeNoteId
-                }
-            }
-            // Edge case: Note exists but title in store might be stale if it wasn't updated via setNoteTitle locally
-            // This happens if we create a note which sets title in store, but we want to ensure we catch it?
-            // Actually createNote sets both activeNoteId and noteTitle in store so we are good.
-            // The main thing is to NOT overwrite user typing.
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto'
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px'
         }
-    }, [activeNoteId, notes, setNoteTitle])
-
+    }, [title])
 
     useEffect(() => {
         function handleClickOutside(event) {
@@ -473,10 +471,10 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     return (
         <div className="flex flex-col h-full relative z-10">
             {/* Toolbar */}
-            <div className={`h-20 px-8 border-b border-slate-800/50 flex items-center justify-between shrink-0 bg-slate-950/50 backdrop-blur-sm transition-all duration-300 relative z-50`}>
-                <div className="flex-1 mr-8 flex items-center gap-4">
+            <div className={`min-h-[5rem] h-auto py-4 px-8 border-b border-slate-800/50 flex items-start justify-between shrink-0 bg-slate-950/50 backdrop-blur-sm transition-all duration-300 relative z-50`}>
+                <div className="flex-1 mr-8 flex items-start gap-4">
                     {!isSidebarOpen && (
-                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-300 mr-4">
+                        <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-4 duration-300 mr-4 mt-1">
                             <button
                                 onClick={onOpenSidebar}
                                 className="p-2 bg-slate-900/90 backdrop-blur-md border border-slate-700/50 rounded-lg text-indigo-400 hover:text-white shadow-lg hover:shadow-indigo-500/20 transition-all group"
@@ -488,12 +486,19 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                     )}
 
                     <div className="flex-1">
-                        <input
-                            type="text"
-                            value={noteTitle}
-                            onChange={(e) => setNoteTitle(e.target.value)}
+                        <textarea
+                            ref={textareaRef}
+                            value={title}
+                            onChange={(e) => {
+                                setTitle(e.target.value)
+                                setNoteTitle(e.target.value)
+                                e.target.style.height = 'auto'
+                                e.target.style.height = e.target.scrollHeight + 'px'
+                            }}
+                            rows={1}
                             placeholder={language === 'fi' ? 'Nimetön suunnitelma' : 'Untitled Plan'}
-                            className={`text-2xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-slate-600 w-full text-slate-100 ${duplicateWarning ? 'text-rose-400 decoration-rose-500/50 underline decoration-wavy' : ''}`}
+                            className={`text-2xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-slate-600 w-full text-slate-100 resize-none overflow-hidden leading-tight ${duplicateWarning ? 'text-rose-400 decoration-rose-500/50 underline decoration-wavy' : ''}`}
+                            style={{ height: 'auto', minHeight: '32px' }}
                         />
                         {duplicateWarning && (
                             <div className="absolute top-full left-0 mt-2 z-50 animate-in fade-in slide-in-from-top-1 duration-200">

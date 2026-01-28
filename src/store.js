@@ -185,6 +185,7 @@ export const useStore = create(persist((set, get) => ({
             .single()
 
         if (!error && data) {
+            console.log('Created note:', { id: data.id, title: data.title })
             set(state => ({
                 activeNoteId: data.id,
                 noteTitle: data.title,

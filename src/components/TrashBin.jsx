@@ -70,8 +70,8 @@ export function TrashBin({ onClose }) {
                                     key={`${item.type}:${item.id}`}
                                     onClick={() => toggleSelect(item.id, item.type)}
                                     className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${isSelected
-                                            ? 'bg-rose-900/20 border-rose-500/50'
-                                            : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800'
+                                        ? 'bg-rose-900/20 border-rose-500/50'
+                                        : 'bg-slate-800/30 border-slate-700/30 hover:bg-slate-800'
                                         }`}
                                 >
                                     <div className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 ${isSelected ? 'bg-rose-500 border-rose-500' : 'border-slate-600'
@@ -82,14 +82,14 @@ export function TrashBin({ onClose }) {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${item.type === 'note'
-                                                    ? 'bg-indigo-500/20 text-indigo-300'
-                                                    : 'bg-emerald-500/20 text-emerald-300'
+                                                ? 'bg-indigo-500/20 text-indigo-300'
+                                                : 'bg-emerald-500/20 text-emerald-300'
                                                 }`}>
                                                 {item.type === 'note'
                                                     ? (language === 'fi' ? 'Suunnitelma' : 'Plan')
                                                     : (language === 'fi' ? 'Versio' : 'Version')}
                                             </span>
-                                            <h3 className="font-semibold text-slate-200 truncate">
+                                            <h3 className="font-semibold text-slate-200 break-all leading-tight">
                                                 {item.title || (language === 'fi' ? 'Nimetön' : 'Untitled')}
                                             </h3>
                                         </div>
