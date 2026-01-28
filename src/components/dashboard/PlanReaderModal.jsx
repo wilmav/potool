@@ -7,7 +7,7 @@ import { useStore } from '../../store'
 // Let's use a clear HTML render with prose classes.
 
 export const PlanReaderModal = ({ note, onClose }) => {
-    const { comments, fetchComments, addComment, resolveComment, user } = useStore()
+    const { comments, fetchComments, addComment, resolveComment, user, language } = useStore()
     const [newComment, setNewComment] = useState('')
     const [activeTab, setActiveTab] = useState('read') // 'read' | 'comments'
 
@@ -40,7 +40,10 @@ export const PlanReaderModal = ({ note, onClose }) => {
                         <div>
                             <h2 className="text-2xl font-bold text-white mb-1">{note.title}</h2>
                             <div className="text-sm text-slate-400">
-                                Last updated {new Date(note.updated_at).toLocaleDateString()}
+                                Last updated {(() => {
+                                    const date = new Date(note.updated_at || note.created_at)
+                                    return `${date.toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                                })()}
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -97,7 +100,10 @@ export const PlanReaderModal = ({ note, onClose }) => {
                                             </span>
                                         </div>
                                         <span className="text-[10px] text-slate-500">
-                                            {new Date(comment.created_at).toLocaleDateString()}
+                                            {(() => {
+                                                const date = new Date(comment.created_at)
+                                                return `${date.toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                                            })()}
                                         </span>
                                     </div>
                                     <p className="text-sm text-slate-300 leading-relaxed mb-2">

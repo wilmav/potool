@@ -13,7 +13,7 @@ export function Sidebar() {
         files, loadingFiles, fetchFiles, uploadFile, deleteFile, getDownloadUrl
     } = useStore()
 
-    const [view, setView] = useState('library') // 'library' | 'plans'
+    const [view, setView] = useState('plans') // 'library' | 'plans'
     const [searchTerm, setSearchTerm] = useState('')
     const [expandedThemes, setExpandedThemes] = useState(new Set(['Discovery', 'Riskit', 'Ideointi', 'Määrittely']))
 
@@ -204,18 +204,6 @@ export function Sidebar() {
             {/* View Switcher */}
             <div className="p-4 pb-0 grid grid-cols-4 gap-2">
                 <button
-                    onClick={() => setView('library')}
-                    onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Kirjasto: Selaa ja poimi valmiita termejä' : 'Library: Browse and pick predefined terms')}
-                    onMouseLeave={handleTooltipLeave}
-                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav ${view === 'library'
-                        ? 'bg-slate-700/50 text-white ring-1 ring-slate-600/50'
-                        : 'bg-slate-800/80 text-slate-300 hover:text-emerald-200 hover:bg-emerald-900/40 border border-slate-700/50'
-                        }`}
-                    title={language === 'fi' ? 'Kirjasto' : 'Library'}
-                >
-                    <span className={`text-[10px] font-black tracking-tighter ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`}>ABC</span>
-                </button>
-                <button
                     onClick={() => setView('plans')}
                     onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Suunnitelmat: Hallitse omia suunnitelmiasi' : 'Plans: Manage your own plans')}
                     onMouseLeave={handleTooltipLeave}
@@ -226,6 +214,18 @@ export function Sidebar() {
                     title={language === 'fi' ? 'Suunnitelmat' : 'My Plans'}
                 >
                     <FileText className={`w-5 h-5 transition-colors ${view === 'plans' ? 'text-white' : 'text-cyan-400 group-hover/nav:text-cyan-300'}`} />
+                </button>
+                <button
+                    onClick={() => setView('library')}
+                    onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Kirjasto: Selaa ja poimi valmiita termejä' : 'Library: Browse and pick predefined terms')}
+                    onMouseLeave={handleTooltipLeave}
+                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav ${view === 'library'
+                        ? 'bg-slate-700/50 text-white ring-1 ring-slate-600/50'
+                        : 'bg-slate-800/80 text-slate-300 hover:text-emerald-200 hover:bg-emerald-900/40 border border-slate-700/50'
+                        }`}
+                    title={language === 'fi' ? 'Kirjasto' : 'Library'}
+                >
+                    <span className={`text-[10px] font-black tracking-tighter ${view === 'library' ? 'text-white' : 'text-emerald-400 group-hover/nav:text-emerald-300'}`}>ABC</span>
                 </button>
                 <button
                     onClick={() => setView('files')}
@@ -454,8 +454,11 @@ export function Sidebar() {
                                                         <h3 className={`font-semibold text-sm truncate pr-2 ${activeNoteId === note.id ? 'text-indigo-100' : 'text-slate-200 group-hover:text-white'}`}>
                                                             {note.title || (language === 'fi' ? 'Nimetön suunnitelma' : 'Untitled Plan')}
                                                         </h3>
-                                                        <span className="text-xs text-slate-500 truncate block">
-                                                            {new Date(note.updated_at).toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-US', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} {new Date(note.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                        <span className="text-xs text-slate-500 block">
+                                                            {(() => {
+                                                                const date = new Date(note.updated_at || note.created_at)
+                                                                return `${date.toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                                                            })()}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -513,7 +516,7 @@ export function Sidebar() {
                                                                     </div>
                                                                 )}
                                                                 <span className="flex-1">
-                                                                    {new Date(version.created_at).toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-US', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} {new Date(version.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                                    {new Date(version.created_at).toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} {new Date(version.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                                                                 </span>
                                                                 {version.summary && !isSelectionMode && (
                                                                     <Info className="w-3 h-3 text-slate-600 group-hover/version:text-indigo-400" />

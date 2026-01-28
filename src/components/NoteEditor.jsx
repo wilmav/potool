@@ -1,5 +1,5 @@
 import { useStore } from '../store'
-import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut, ChevronRight, Layout, Pilcrow, Indent, Outdent, List, ListOrdered, X, Disc } from 'lucide-react'
+import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut, ChevronRight, Layout, Pilcrow, Indent, Outdent, List, ListOrdered, X, Disc, AlertCircle } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { supabase } from '../supabase'
 import { useState, useEffect, useRef } from 'react'
@@ -197,6 +197,28 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     // Since we don't have real-time collaboration yet, we can simplifiy:
     // Only update editor if the content in store is DIFFERENT and we didn't just type it.
     // However, keeping it simple: triggering on ID change is the safest for now.
+
+    const lastSyncedNoteId = useRef(activeNoteId)
+
+    // Sync Title when Active Note Changes
+    useEffect(() => {
+        // If we have an active note, and it's different from the one we last synced OR we have no sync record
+        // we should update the local title state to match the active note.
+        if (activeNoteId && notes) {
+            // Check if we switched notes
+            if (activeNoteId !== lastSyncedNoteId.current) {
+                const currentNote = notes.find(n => n.id === activeNoteId)
+                if (currentNote) {
+                    setNoteTitle(currentNote.title)
+                    lastSyncedNoteId.current = activeNoteId
+                }
+            }
+            // Edge case: Note exists but title in store might be stale if it wasn't updated via setNoteTitle locally
+            // This happens if we create a note which sets title in store, but we want to ensure we catch it?
+            // Actually createNote sets both activeNoteId and noteTitle in store so we are good.
+            // The main thing is to NOT overwrite user typing.
+        }
+    }, [activeNoteId, notes, setNoteTitle])
 
 
     useEffect(() => {
@@ -474,8 +496,13 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             className={`text-2xl font-bold bg-transparent border-none focus:ring-0 p-0 placeholder-slate-600 w-full text-slate-100 ${duplicateWarning ? 'text-rose-400 decoration-rose-500/50 underline decoration-wavy' : ''}`}
                         />
                         {duplicateWarning && (
-                            <div className="text-xs text-rose-400 font-medium animate-in slide-in-from-top-1 absolute top-full left-0 mt-1 bg-slate-950/90 border border-rose-500/30 px-2 py-1 rounded shadow-xl z-50">
-                                {duplicateWarning}
+                            <div className="absolute top-full left-0 mt-2 z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                                <div className="flex items-center gap-2 bg-rose-500/10 backdrop-blur-md border border-rose-500/30 px-3 py-1.5 rounded-lg shadow-xl shadow-rose-950/20">
+                                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                                    <span className="text-xs text-rose-400 font-bold tracking-tight">
+                                        {duplicateWarning}
+                                    </span>
+                                </div>
                             </div>
                         )}
                         <div className="flex items-center gap-2 mt-1">

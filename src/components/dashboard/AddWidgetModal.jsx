@@ -119,7 +119,10 @@ export const AddWidgetModal = ({ isOpen, onClose, onAdd }) => {
                                         <div>
                                             <h4 className="text-sm font-bold text-slate-200">{note.title}</h4>
                                             <p className="text-xs text-slate-500">
-                                                {new Date(note.updated_at).toLocaleDateString()}
+                                                {(() => {
+                                                    const date = new Date(note.updated_at || note.created_at)
+                                                    return `${date.toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                                                })()}
                                             </p>
                                         </div>
                                     </button>

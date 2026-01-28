@@ -5,7 +5,6 @@ import { supabase } from './supabase'
 export const useStore = create(persist((set, get) => ({
     // Language State
     language: 'fi',
-    setLanguage: (lang) => set({ language: lang }),
 
     // Auth State
     user: null,
@@ -602,6 +601,7 @@ export const useStore = create(persist((set, get) => ({
     setActiveTabId: (id) => set({ activeTabId: id }),
 
     createDashboard: async (title) => {
+        const { language } = get()
         try {
             const { DashboardService } = await import('./services/dashboardService')
             const newDash = await DashboardService.createDashboard(title)
@@ -610,7 +610,8 @@ export const useStore = create(persist((set, get) => ({
                 activeDashboardId: newDash.id
             }))
             // Create default tab?
-            await DashboardService.createTab(newDash.id, 'My Workspace', 0, '#60a5fa')
+            const defaultTabName = language === 'fi' ? 'Oma työtila' : 'My Workspace'
+            await DashboardService.createTab(newDash.id, defaultTabName, 0, '#60a5fa')
             get().loadDashboard(newDash.id)
         } catch (err) {
             console.error('Error creating dashboard:', err)

@@ -124,8 +124,8 @@ export const NotesWidget = ({ onOpen }) => {
                     <button
                         onClick={() => setActiveTab('plans')}
                         className={`flex-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-full text-xs font-semibold transition-all ${activeTab === 'plans'
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                                : 'text-slate-400 hover:text-slate-200'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'text-slate-400 hover:text-slate-200'
                             }`}
                     >
                         <FileText size={12} />
@@ -134,8 +134,8 @@ export const NotesWidget = ({ onOpen }) => {
                     <button
                         onClick={() => setActiveTab('files')}
                         className={`flex-1 flex items-center justify-center gap-2 py-1.5 px-3 rounded-full text-xs font-semibold transition-all ${activeTab === 'files'
-                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
-                                : 'text-slate-400 hover:text-slate-200'
+                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                            : 'text-slate-400 hover:text-slate-200'
                             }`}
                     >
                         <ImageIcon size={12} />
@@ -193,9 +193,10 @@ export const NotesWidget = ({ onOpen }) => {
                                         <div className="flex items-center gap-2 mt-0.5">
                                             <Clock size={10} className="text-slate-500" />
                                             <span className="text-[9px] text-slate-500 font-mono">
-                                                {new Date(note.updated_at || note.created_at).toLocaleDateString('fi-FI', {
-                                                    day: 'numeric', month: 'numeric'
-                                                })}
+                                                {(() => {
+                                                    const date = new Date(note.updated_at || note.created_at)
+                                                    return `${date.toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                                                })()}
                                             </span>
                                         </div>
                                     </div>
@@ -224,8 +225,8 @@ export const NotesWidget = ({ onOpen }) => {
                                     >
                                         <div className="min-w-0 flex-1 flex items-center gap-3">
                                             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${type === 'image' ? 'bg-purple-500/10 text-purple-400' :
-                                                    type === 'pdf' ? 'bg-red-500/10 text-red-400' :
-                                                        'bg-indigo-500/10 text-indigo-400'
+                                                type === 'pdf' ? 'bg-red-500/10 text-red-400' :
+                                                    'bg-indigo-500/10 text-indigo-400'
                                                 }`}>
                                                 <FileIcon type={type} />
                                             </div>
@@ -236,9 +237,10 @@ export const NotesWidget = ({ onOpen }) => {
                                                 <div className="flex items-center gap-2 mt-0.5">
                                                     <Clock size={10} className="text-slate-500" />
                                                     <span className="text-[9px] text-slate-500 font-mono">
-                                                        {new Date(file.created_at).toLocaleDateString('fi-FI', {
-                                                            day: 'numeric', month: 'numeric'
-                                                        })}
+                                                        {(() => {
+                                                            const date = new Date(file.created_at)
+                                                            return `${date.toLocaleDateString(language === 'fi' ? 'fi-FI' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'numeric', year: 'numeric' })} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+                                                        })()}
                                                     </span>
                                                 </div>
                                             </div>
