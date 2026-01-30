@@ -1125,29 +1125,31 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                     )}
 
                     {/* Group 2.5: Insert & Edit Menus */}
-                    {!isSourceMode && editor && (
+                    {editor && (
                         <div className="flex items-center gap-1">
                             {/* Insert Menu */}
-                            <div className="relative" ref={insertMenuRef}>
-                                <button
-                                    onMouseDown={(e) => e.preventDefault()}
-                                    onClick={() => setShowInsertMenu(!showInsertMenu)}
-                                    className={`p-2 rounded-lg transition-colors ${showInsertMenu ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
-                                    title={language === 'fi' ? "Lisää..." : "Insert..."}
-                                >
-                                    <Plus className="w-5 h-5" />
-                                </button>
-                                {showInsertMenu && (
-                                    <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
-                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { addImage(); setShowInsertMenu(false) }} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                            <ImageIcon className="w-4 h-4 text-sky-400" /> {language === 'fi' ? "Kuva" : "Image"}
-                                        </button>
-                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { addVideo(); setShowInsertMenu(false) }} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                            <YoutubeIcon className="w-4 h-4 text-rose-400" /> {language === 'fi' ? "Youtube Video" : "Youtube Video"}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                            {!isSourceMode && (
+                                <div className="relative" ref={insertMenuRef}>
+                                    <button
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => setShowInsertMenu(!showInsertMenu)}
+                                        className={`p-2 rounded-lg transition-colors ${showInsertMenu ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
+                                        title={language === 'fi' ? "Lisää..." : "Insert..."}
+                                    >
+                                        <Plus className="w-5 h-5" />
+                                    </button>
+                                    {showInsertMenu && (
+                                        <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
+                                            <button onMouseDown={(e) => e.preventDefault()} onClick={() => { addImage(); setShowInsertMenu(false) }} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                                <ImageIcon className="w-4 h-4 text-sky-400" /> {language === 'fi' ? "Kuva" : "Image"}
+                                            </button>
+                                            <button onMouseDown={(e) => e.preventDefault()} onClick={() => { addVideo(); setShowInsertMenu(false) }} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                                <YoutubeIcon className="w-4 h-4 text-rose-400" /> {language === 'fi' ? "Youtube Video" : "Youtube Video"}
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Edit Menu */}
                             <div className="relative" ref={editMenuRef}>
@@ -1161,23 +1163,27 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                 </button>
                                 {showEditMenu && (
                                     <div className="absolute top-full left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
-                                        <button
-                                            onMouseDown={(e) => e.preventDefault()}
-                                            onClick={() => { editor.chain().focus().undo().run(); setShowEditMenu(false) }}
-                                            disabled={!editor.can().undo()}
-                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
-                                        >
-                                            <Undo className="w-4 h-4 text-amber-400" /> {language === 'fi' ? "Kumoa" : "Undo"}
-                                        </button>
-                                        <button
-                                            onMouseDown={(e) => e.preventDefault()}
-                                            onClick={() => { editor.chain().focus().redo().run(); setShowEditMenu(false) }}
-                                            disabled={!editor.can().redo()}
-                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
-                                        >
-                                            <Redo className="w-4 h-4 text-emerald-400" /> {language === 'fi' ? "Tee uudelleen" : "Redo"}
-                                        </button>
-                                        <div className="h-px bg-slate-800 my-1"></div>
+                                        {!isSourceMode && (
+                                            <>
+                                                <button
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={() => { editor.chain().focus().undo().run(); setShowEditMenu(false) }}
+                                                    disabled={!editor.can().undo()}
+                                                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
+                                                >
+                                                    <Undo className="w-4 h-4 text-amber-400" /> {language === 'fi' ? "Kumoa" : "Undo"}
+                                                </button>
+                                                <button
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={() => { editor.chain().focus().redo().run(); setShowEditMenu(false) }}
+                                                    disabled={!editor.can().redo()}
+                                                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
+                                                >
+                                                    <Redo className="w-4 h-4 text-emerald-400" /> {language === 'fi' ? "Tee uudelleen" : "Redo"}
+                                                </button>
+                                                <div className="h-px bg-slate-800 my-1"></div>
+                                            </>
+                                        )}
                                         <button
                                             onMouseDown={(e) => e.preventDefault()}
                                             onClick={() => {
@@ -1187,16 +1193,24 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                             }}
                                             className={`flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors ${isSourceMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
                                         >
-                                            <Code className="w-4 h-4 text-sky-400" /> {language === 'fi' ? "Lähdekoodi / Visuaalinen" : "Source Code / Visual"}
+                                            <Code className="w-4 h-4 text-sky-400" /> {
+                                                language === 'fi'
+                                                    ? (isSourceMode ? "Visuaalinen tila" : "Lähdekoodi")
+                                                    : (isSourceMode ? "Visual Mode" : "Source Code")
+                                            }
                                         </button>
-                                        <div className="h-px bg-slate-800 my-1"></div>
-                                        <button
-                                            onMouseDown={(e) => e.preventDefault()}
-                                            onClick={() => { setFindReplaceModalOpen(true); setShowEditMenu(false) }}
-                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
-                                        >
-                                            <Search className="w-4 h-4 text-indigo-400" /> {language === 'fi' ? "Etsi ja korvaa" : "Find & Replace"}
-                                        </button>
+                                        {!isSourceMode && (
+                                            <>
+                                                <div className="h-px bg-slate-800 my-1"></div>
+                                                <button
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={() => { setFindReplaceModalOpen(true); setShowEditMenu(false) }}
+                                                    className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                                >
+                                                    <Search className="w-4 h-4 text-indigo-400" /> {language === 'fi' ? "Etsi ja korvaa" : "Find & Replace"}
+                                                </button>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>
