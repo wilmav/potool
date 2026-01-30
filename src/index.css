@@ -15,6 +15,13 @@ body {
   @apply bg-slate-950 text-slate-200;
 }
 
+/* Bright Selection Highlight */
+::selection {
+  background-color: #f59e0b;
+  /* Amber 500 */
+  color: #000000;
+}
+
 /* Custom Scrollbar for Webkit */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;

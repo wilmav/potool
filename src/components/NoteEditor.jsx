@@ -15,6 +15,7 @@ import ImageResize from 'tiptap-extension-resize-image'
 import Youtube from '@tiptap/extension-youtube'
 import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon, Search, Replace, MoreHorizontal } from 'lucide-react'
 import { InputModal } from './dashboard/InputModal'
+import { FindReplaceModal } from './dashboard/FindReplaceModal'
 
 export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const {
@@ -70,6 +71,10 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         title: '',
         placeholder: '',
     })
+
+    // Find & Replace Modal State
+    const [findReplaceModalOpen, setFindReplaceModalOpen] = useState(false)
+
     const summaryPopoverRef = useRef(null)
 
     useEffect(() => {
@@ -370,6 +375,180 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         } else if (inputModal.type === 'video') {
             editor.chain().focus().setYoutubeVideo({ src: url }).run()
         }
+    }
+
+    const handleFind = ({ searchTerm, searchScope, index }, callback) => {
+        if (!editor) return
+
+        let matches = []
+        const doc = editor.state.doc
+
+        doc.descendants((node, pos) => {
+            const isTargetNode =
+                (searchScope === 'global' && node.isText) ||
+                (searchScope === 'heading1' && node.type.name === 'heading' && node.attrs.level === 1) ||
+                (searchScope === 'heading2' && node.type.name === 'heading' && node.attrs.level === 2) ||
+                (searchScope === 'heading3' && node.type.name === 'heading' && node.attrs.level === 3) ||
+                (searchScope === 'paragraph' && node.type.name === 'paragraph')
+
+            if (!isTargetNode) return
+
+            const text = node.textContent
+
+            if (!searchTerm && searchScope !== 'global') {
+                // If no search term but scope is set, match entire node content
+                if (text.length > 0) {
+                    matches.push({ from: pos + 1, to: pos + node.nodeSize - 1, node })
+                }
+            } else if (searchTerm) {
+                const regex = new RegExp(searchTerm, 'gi')
+                let match
+                while ((match = regex.exec(text)) !== null) {
+                    // Correct position calculation:
+                    // For text nodes, pos is start of text.
+                    // For block nodes (h1/p), pos is before start tag. Text starts at pos+1. 
+                    // BUT descendants iterates over text nodes too if scoped globally.
+
+                    // If we are scanning block nodes (H1/P), the text content is inside.
+                    // Match index is relative to node text.
+                    // Absolute position = pos + 1 + match.index
+
+                    // If scanning text nodes directly (global), pos is absolute start of text node.
+
+                    const absoluteStart = node.isText ? pos + match.index : pos + 1 + match.index
+                    matches.push({
+                        from: absoluteStart,
+                        to: absoluteStart + match[0].length,
+                        text: match[0]
+                    })
+                }
+            }
+        })
+
+        const count = matches.length
+        if (count === 0) {
+            callback(0, 0)
+            return
+        }
+
+        // Handle cycling index
+        let targetIndex = typeof index === 'number' ? index : 0
+        if (targetIndex < 1) targetIndex = count
+        if (targetIndex > count) targetIndex = 1
+
+        // Highlight logic (select the match)
+        const match = matches[targetIndex - 1]
+        if (match) {
+            editor.chain().focus().setTextSelection({ from: match.from, to: match.to }).run()
+
+            // Scroll into view
+            const dom = editor.view.domAtPos(match.from).node
+            if (dom && dom.scrollIntoView) {
+                dom.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }
+
+        callback(count, targetIndex)
+    }
+
+    const handleReplace = ({ searchTerm, searchScope, replaceTerm, replaceColor }) => {
+        if (!editor) return
+
+        const { from, to } = editor.state.selection
+        if (from === to) return // No selection
+
+        editor.chain().focus()
+
+        if (replaceTerm) {
+            editor.chain().insertContent(replaceTerm)
+        }
+
+        if (replaceColor) {
+            // If we just replaced text, we need to select the new text to color it
+            // Tiptap insertContent leaves cursor at end. 
+            // Simplest: Apply mark to current selection if we didn't replace text,
+            // OR if we did replace, we need to know where.
+            // Chaining: insertContent(text).setTextSelection(...)
+
+            // Actually, if we replaced text, the new text is inserted.
+            // If we want to color it, we should chain:
+            // .insertContentAt(range, text, { style: ... }) ?? 
+            // Easier: .setColor(replaceColor) applies to selection.
+            // If we replaced, selection is collapsed. 
+
+            // Better:
+            if (replaceTerm) {
+                // Re-select inserted text? Hard to know strict length without tracking.
+                // Alternative: set mark active then insert?
+                editor.chain().setColor(replaceColor).run()
+            } else {
+                editor.chain().setColor(replaceColor).run()
+            }
+        }
+
+        // Run execution
+        editor.chain().run()
+    }
+
+    const handleReplaceAll = ({ searchTerm, searchScope, replaceTerm, replaceColor }) => {
+        if (!editor) return
+
+        // 1. Find all matches again (fresh scan)
+        let matches = []
+        const doc = editor.state.doc
+
+        doc.descendants((node, pos) => {
+            const isTargetNode =
+                (searchScope === 'global' && node.isText) ||
+                (searchScope === 'heading1' && node.type.name === 'heading' && node.attrs.level === 1) ||
+                (searchScope === 'heading2' && node.type.name === 'heading' && node.attrs.level === 2) ||
+                (searchScope === 'heading3' && node.type.name === 'heading' && node.attrs.level === 3) ||
+                (searchScope === 'paragraph' && node.type.name === 'paragraph')
+
+            if (!isTargetNode) return
+
+            const text = node.textContent
+
+            if (!searchTerm && searchScope !== 'global') {
+                if (text.length > 0) {
+                    matches.push({ from: pos + 1, to: pos + node.nodeSize - 1 })
+                }
+            } else if (searchTerm) {
+                const regex = new RegExp(searchTerm, 'gi')
+                let match
+                while ((match = regex.exec(text)) !== null) {
+                    const absoluteStart = node.isText ? pos + match.index : pos + 1 + match.index
+                    matches.push({
+                        from: absoluteStart,
+                        to: absoluteStart + match[0].length
+                    })
+                }
+            }
+        })
+
+        if (matches.length === 0) return
+
+        // 2. Perform replacements in reverse order to preserve positions
+        const tr = editor.state.tr
+
+        for (let i = matches.length - 1; i >= 0; i--) {
+            const { from, to } = matches[i]
+
+            if (replaceTerm) {
+                tr.insertText(replaceTerm, from, to)
+
+                if (replaceColor) {
+                    // Length of replaced text
+                    const newTo = from + replaceTerm.length
+                    tr.addMark(from, newTo, editor.schema.marks.textStyle.create({ color: replaceColor }))
+                }
+            } else if (replaceColor) {
+                // Just color existing
+                tr.addMark(from, to, editor.schema.marks.textStyle.create({ color: replaceColor }))
+            }
+        }
+
+        editor.view.dispatch(tr)
     }
 
     const handleExport = (type) => {
@@ -940,7 +1119,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                         <div className="h-px bg-slate-800 my-1"></div>
                                         <button
                                             onMouseDown={(e) => e.preventDefault()}
-                                            onClick={() => { alert('Find & Replace functionality coming soon!'); setShowEditMenu(false) }}
+                                            onClick={() => { setFindReplaceModalOpen(true); setShowEditMenu(false) }}
                                             className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
                                         >
                                             <Search className="w-4 h-4 text-indigo-400" /> {language === 'fi' ? "Etsi ja korvaa" : "Find & Replace"}
@@ -1128,6 +1307,16 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                 onSubmit={handleInputModalSubmit}
                 title={inputModal.title}
                 placeholder={inputModal.placeholder}
+            />
+            {/* Find & Replace Modal */}
+            <FindReplaceModal
+                isOpen={findReplaceModalOpen}
+                onClose={() => setFindReplaceModalOpen(false)}
+                onFindHost={handleFind}
+                onReplace={handleReplace}
+                onReplaceAll={handleReplaceAll}
+                recentColors={recentColors}
+                onSaveColor={addRecentColor}
             />
         </div >
     )
