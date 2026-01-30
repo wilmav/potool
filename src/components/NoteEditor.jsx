@@ -13,7 +13,8 @@ import TaskItem from '@tiptap/extension-task-item'
 import Underline from '@tiptap/extension-underline'
 import ImageResize from 'tiptap-extension-resize-image'
 import Youtube from '@tiptap/extension-youtube'
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon, Search, Replace, MoreHorizontal } from 'lucide-react'
+import { InputModal } from './dashboard/InputModal'
 
 export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const {
@@ -36,6 +37,8 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const [showListMenu, setShowListMenu] = useState(false)
     const [showColorMenu, setShowColorMenu] = useState(false)
     const [lineSpacing, setLineSpacing] = useState('normal') // 'normal' | 'compact'
+    const [showInsertMenu, setShowInsertMenu] = useState(false)
+    const [showEditMenu, setShowEditMenu] = useState(false)
 
     // Toggle between Visual (Tiptap) and Source (HTML Textarea)
     const [isSourceMode, setIsSourceMode] = useState(false)
@@ -59,6 +62,14 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const showSummaryPopoverRef = useRef(false) // Track state for event listener
     const [summaryDraft, setSummaryDraft] = useState('')
     const summaryButtonRef = useRef(null)
+
+    // Input Modal State for Image/Video
+    const [inputModal, setInputModal] = useState({
+        isOpen: false,
+        type: null, // 'image' | 'video'
+        title: '',
+        placeholder: '',
+    })
     const summaryPopoverRef = useRef(null)
 
     useEffect(() => {
@@ -106,6 +117,8 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const textStyleMenuRef = useRef(null)
     const listMenuRef = useRef(null)
     const colorMenuRef = useRef(null)
+    const insertMenuRef = useRef(null)
+    const editMenuRef = useRef(null)
 
     // Tiptap Editor Initialization
     const editor = useEditor({
@@ -245,6 +258,12 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
             if (colorMenuRef.current && !colorMenuRef.current.contains(event.target)) {
                 setShowColorMenu(false)
             }
+            if (insertMenuRef.current && !insertMenuRef.current.contains(event.target)) {
+                setShowInsertMenu(false)
+            }
+            if (editMenuRef.current && !editMenuRef.current.contains(event.target)) {
+                setShowEditMenu(false)
+            }
         }
 
         document.addEventListener("mousedown", handleClickOutside)
@@ -326,16 +345,29 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     }
 
     const addImage = () => {
-        const url = window.prompt(language === 'fi' ? 'Syötä kuvan URL-osoite' : 'Enter image URL')
-        if (url && editor) {
-            // Use insertContent which works with any image node name (Tiptap resolves HTML)
-            editor.chain().focus().insertContent(`<img src="${url}" />`).run()
-        }
+        setInputModal({
+            isOpen: true,
+            type: 'image',
+            title: language === 'fi' ? 'Lisää kuva' : 'Insert Image',
+            placeholder: language === 'fi' ? 'Syötä kuvan URL-osoite' : 'Enter image URL',
+        })
     }
 
     const addVideo = () => {
-        const url = window.prompt(language === 'fi' ? 'Syötä YouTube-videon URL' : 'Enter YouTube URL')
-        if (url && editor) {
+        setInputModal({
+            isOpen: true,
+            type: 'video',
+            title: language === 'fi' ? 'Lisää YouTube-video' : 'Insert YouTube Video',
+            placeholder: language === 'fi' ? 'Syötä videon URL-osoite' : 'Enter YouTube video URL',
+        })
+    }
+
+    const handleInputModalSubmit = (url) => {
+        if (!url) return
+
+        if (inputModal.type === 'image') {
+            editor.chain().focus().setImage({ src: url }).run()
+        } else if (inputModal.type === 'video') {
             editor.chain().focus().setYoutubeVideo({ src: url }).run()
         }
     }
@@ -852,25 +884,70 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         </>
                     )}
 
-                    {/* Group 2.5: Media */}
+                    {/* Group 2.5: Insert & Edit Menus */}
                     {!isSourceMode && editor && (
                         <div className="flex items-center gap-1">
-                            <button
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={addImage}
-                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
-                                title={language === 'fi' ? "Lisää kuva" : "Insert Image"}
-                            >
-                                <ImageIcon className="w-5 h-5" />
-                            </button>
-                            <button
-                                onMouseDown={(e) => e.preventDefault()}
-                                onClick={addVideo}
-                                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
-                                title={language === 'fi' ? "Lisää video" : "Insert Video"}
-                            >
-                                <YoutubeIcon className="w-5 h-5" />
-                            </button>
+                            {/* Insert Menu */}
+                            <div className="relative" ref={insertMenuRef}>
+                                <button
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => setShowInsertMenu(!showInsertMenu)}
+                                    className={`p-2 rounded-lg transition-colors ${showInsertMenu ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
+                                    title={language === 'fi' ? "Lisää..." : "Insert..."}
+                                >
+                                    <Plus className="w-5 h-5" />
+                                </button>
+                                {showInsertMenu && (
+                                    <div className="absolute top-full left-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { addImage(); setShowInsertMenu(false) }} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                            <ImageIcon className="w-4 h-4 text-sky-400" /> {language === 'fi' ? "Kuva" : "Image"}
+                                        </button>
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => { addVideo(); setShowInsertMenu(false) }} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                            <YoutubeIcon className="w-4 h-4 text-rose-400" /> {language === 'fi' ? "Youtube Video" : "Youtube Video"}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Edit Menu */}
+                            <div className="relative" ref={editMenuRef}>
+                                <button
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => setShowEditMenu(!showEditMenu)}
+                                    className={`p-2 rounded-lg transition-colors ${showEditMenu ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
+                                    title={language === 'fi' ? "Muokkaa..." : "Edit..."}
+                                >
+                                    <MoreHorizontal className="w-5 h-5" />
+                                </button>
+                                {showEditMenu && (
+                                    <div className="absolute top-full left-0 mt-2 w-56 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
+                                        <button
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => { editor.chain().focus().undo().run(); setShowEditMenu(false) }}
+                                            disabled={!editor.can().undo()}
+                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
+                                        >
+                                            <Undo className="w-4 h-4 text-amber-400" /> {language === 'fi' ? "Kumoa" : "Undo"}
+                                        </button>
+                                        <button
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => { editor.chain().focus().redo().run(); setShowEditMenu(false) }}
+                                            disabled={!editor.can().redo()}
+                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors disabled:opacity-50"
+                                        >
+                                            <Redo className="w-4 h-4 text-emerald-400" /> {language === 'fi' ? "Tee uudelleen" : "Redo"}
+                                        </button>
+                                        <div className="h-px bg-slate-800 my-1"></div>
+                                        <button
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => { alert('Find & Replace functionality coming soon!'); setShowEditMenu(false) }}
+                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                        >
+                                            <Search className="w-4 h-4 text-indigo-400" /> {language === 'fi' ? "Etsi ja korvaa" : "Find & Replace"}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                             <div className="w-px h-6 bg-slate-800 mx-2"></div>
                         </div>
                     )}
@@ -1043,6 +1120,15 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                     )}
                 </div>
             </div >
+
+            {/* Input Modal for Image/Video */}
+            <InputModal
+                isOpen={inputModal.isOpen}
+                onClose={() => setInputModal(prev => ({ ...prev, isOpen: false }))}
+                onSubmit={handleInputModalSubmit}
+                title={inputModal.title}
+                placeholder={inputModal.placeholder}
+            />
         </div >
     )
 }
