@@ -23,7 +23,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         noteTitle, setNoteTitle,
         noteSummary, updateQuickSummary, // NEW: Store hooks
         language,
-        translateNoteContent, isTranslating,
+        translateText, isTranslating,
         saveNote, isSaving, createNote,
         isManualSaving,
         recentColors, addRecentColor, removeRecentColor,
@@ -289,8 +289,69 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     }, [noteContent, noteTitle])
 
     const handleTranslate = async (targetLang) => {
+        if (!editor) return
+
+        const { from, to, empty } = editor.state.selection
+
+        // If selection is empty, fallback to whole doc translation (simple Replace)
+        if (empty) {
+            const textToTranslate = noteContent
+            if (!textToTranslate) return
+            setShowTranslateMenu(false)
+            const translatedText = await translateText(textToTranslate, targetLang)
+            if (translatedText) {
+                editor.chain().focus().setContent(translatedText).run()
+                setNoteContent(translatedText)
+            }
+            return
+        }
+
+        // If selection exists, we traverse text nodes to preserve formatting (lists, headers, etc)
         setShowTranslateMenu(false)
-        await translateNoteContent(targetLang)
+
+        const textNodes = []
+        editor.state.doc.nodesBetween(from, to, (node, pos) => {
+            if (node.isText) {
+                // Determine the range of this text node that overlaps with selection
+                const nodeStart = pos
+                const nodeEnd = pos + node.nodeSize
+
+                const start = Math.max(from, nodeStart)
+                const end = Math.min(to, nodeEnd)
+
+                if (start < end) {
+                    textNodes.push({
+                        text: node.text.slice(start - nodeStart, end - nodeStart),
+                        pos: start,
+                        end: end,
+                        marks: node.marks
+                    })
+                }
+            }
+        })
+
+        // Translate all chunks in parallel
+        // We use translateText but it might be overkill for short strings, but it handles caching/API
+        const translations = await Promise.all(textNodes.map(async (item) => {
+            return await translateText(item.text, targetLang)
+        }))
+
+        // Apply replacements in REVERSE order to maintain positions
+        if (translations.length > 0) {
+            editor.chain().focus().command(({ tr, dispatch }) => {
+                if (dispatch) {
+                    for (let i = textNodes.length - 1; i >= 0; i--) {
+                        const original = textNodes[i]
+                        const translated = translations[i]
+                        if (translated && translated !== original.text) {
+                            tr.replaceWith(original.pos, original.end, editor.schema.text(translated, original.marks))
+                        }
+                    }
+                    return true
+                }
+                return false
+            }).run()
+        }
     }
 
     const toggleHeader = (level) => {
@@ -1119,6 +1180,18 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                         <div className="h-px bg-slate-800 my-1"></div>
                                         <button
                                             onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => {
+                                                if (isSourceMode && editor) editor.commands.setContent(noteContent)
+                                                setIsSourceMode(!isSourceMode)
+                                                setShowEditMenu(false)
+                                            }}
+                                            className={`flex items-center gap-3 w-full px-4 py-3 text-sm transition-colors ${isSourceMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}
+                                        >
+                                            <Code className="w-4 h-4 text-sky-400" /> {language === 'fi' ? "Lähdekoodi / Visuaalinen" : "Source Code / Visual"}
+                                        </button>
+                                        <div className="h-px bg-slate-800 my-1"></div>
+                                        <button
+                                            onMouseDown={(e) => e.preventDefault()}
                                             onClick={() => { setFindReplaceModalOpen(true); setShowEditMenu(false) }}
                                             className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
                                         >
@@ -1155,38 +1228,9 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             )}
                         </div>
 
-                        {/* Export */}
-                        <div className="relative" ref={exportMenuRef}>
-                            <button
-                                onClick={() => setShowExportMenu(!showExportMenu)}
-                                className="p-2 text-slate-400 hover:text-sky-400 hover:bg-slate-800 rounded-lg transition-all"
-                                title={language === 'fi' ? "Vie tiedostona" : "Export"}
-                            >
-                                <Download className="w-5 h-5" />
-                            </button>
-                            {showExportMenu && (
-                                <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
-                                    <button onClick={() => handleExport('pdf')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                        <FileText className="w-4 h-4 text-rose-400" /> PDF Document
-                                    </button>
-                                    <button onClick={() => handleExport('md')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                        <FileJson className="w-4 h-4 text-emerald-400" /> Markdown
-                                    </button>
-                                </div>
-                            )}
-                        </div>
 
-                        {/* Source Toggle */}
-                        <button
-                            onClick={() => {
-                                if (isSourceMode && editor) editor.commands.setContent(noteContent)
-                                setIsSourceMode(!isSourceMode)
-                            }}
-                            className={`p-2 rounded-lg transition-colors ${isSourceMode ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
-                            title={language === 'fi' ? "Lähdekoodi / Visuaalinen" : "Source Code / Visual"}
-                        >
-                            <Code className="w-5 h-5" />
-                        </button>
+
+
 
                         {/* History Toggle */}
                         <div className="relative" ref={historyMenuRef}>
@@ -1267,6 +1311,28 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         >
                             {isManualSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                         </button>
+
+
+                        {/* Export/Download */}
+                        <div className="relative" ref={exportMenuRef}>
+                            <button
+                                onClick={() => setShowExportMenu(!showExportMenu)}
+                                className="p-2 text-slate-500 hover:text-sky-400 hover:bg-slate-800 rounded-lg transition-all"
+                                title={language === 'fi' ? "Vie tiedostona" : "Export"}
+                            >
+                                <Download className="w-5 h-5" />
+                            </button>
+                            {showExportMenu && (
+                                <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
+                                    <button onClick={() => handleExport('pdf')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                        <FileText className="w-4 h-4 text-rose-400" /> PDF Document
+                                    </button>
+                                    <button onClick={() => handleExport('md')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                        <FileJson className="w-4 h-4 text-emerald-400" /> Markdown
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
                         <button
                             onClick={onLogout}

@@ -508,46 +508,71 @@ export const useStore = create(persist((set, get) => ({
     // Translation State & Action
     isTranslating: false,
 
-    translateNoteContent: async (targetLangCode) => {
-        const { noteContent, language } = get()
-        if (!noteContent) return
+    translateText: async (text, targetLangCode) => {
+        const { language } = get()
+        if (!text) return ''
 
         set({ isTranslating: true })
 
         try {
-            // Determine language pair
-            // Use provided targetLangCode, or fallback to inverse of current UI language
             let targetLang = targetLangCode
             if (!targetLang) {
                 targetLang = language === 'fi' ? 'fi' : 'en'
             }
-
             const langPair = `AUTODETECT|${targetLang}`
 
-            // Split by paragraphs to respect API limits better
-            const paragraphs = noteContent.split('\n\n')
+            // Helper to translate a single safe chunk
+            const translateChunk = async (chunk) => {
+                try {
+                    const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=${langPair}`)
+                    const data = await response.json()
+                    return data.responseStatus === 200 ? data.responseData.translatedText : chunk
+                } catch (e) {
+                    console.warn('Chunk translation failed:', e)
+                    return chunk
+                }
+            }
+
+            // Split by paragraphs first
+            const paragraphs = text.split('\n\n')
 
             const translatedParagraphs = await Promise.all(paragraphs.map(async (para) => {
                 if (!para.trim()) return para
+                if (para.length < 500) return await translateChunk(para)
 
-                // If it's a header (starts with #), we keep the structure but translate the text
-                // MyMemory handles punctuation usually well.
+                // If paragraph is too long, split by sentences
+                const sentences = para.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [para]
+                let currentChunk = ''
+                let paraTranslations = []
 
-                const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(para)}&langpair=${langPair}`)
-                const data = await response.json()
-
-                if (data.responseStatus === 200) {
-                    return data.responseData.translatedText
-                } else {
-                    console.warn('Translation error for paragraph:', data.responseDetails)
-                    return para // Fallback to original
+                for (const sentence of sentences) {
+                    if ((currentChunk + sentence).length < 500) {
+                        currentChunk += sentence
+                    } else {
+                        if (currentChunk) paraTranslations.push(await translateChunk(currentChunk))
+                        currentChunk = sentence
+                        // Handle extremely long single sentence/string > 500
+                        if (currentChunk.length >= 500) {
+                            // Hard split if needed, or just try sending (API might reject)
+                            // Ideally split by comma or space
+                            const subParts = currentChunk.match(/.{1,499}/g) || [currentChunk]
+                            for (const sub of subParts) {
+                                paraTranslations.push(await translateChunk(sub))
+                            }
+                            currentChunk = ''
+                        }
+                    }
                 }
+                if (currentChunk) paraTranslations.push(await translateChunk(currentChunk))
+
+                return paraTranslations.join('')
             }))
 
-            set({ noteContent: translatedParagraphs.join('\n\n') })
+            return translatedParagraphs.join('\n\n')
 
         } catch (error) {
             console.error('Translation failed:', error)
+            return text // Fallback
         } finally {
             set({ isTranslating: false })
         }
