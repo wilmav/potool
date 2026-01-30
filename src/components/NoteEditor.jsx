@@ -1,5 +1,5 @@
 import { useStore } from '../store'
-import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut, ChevronRight, Layout, Pilcrow, Indent, Outdent, List, ListOrdered, X, Disc, AlertCircle } from 'lucide-react'
+import { Save, Download, FileJson, FileText, Languages, Loader2, Cloud, Heading1, Heading2, Heading3, Heading4, ChevronDown, Palette, Eye, PenTool, Code, Undo, Redo, Plus, History, Clock, RotateCcw, LogOut, ChevronRight, Layout, Pilcrow, Indent, Outdent, List, ListOrdered, X, Disc, AlertCircle, MoveVertical, Minimize2, Maximize2, AlignJustify } from 'lucide-react'
 import { jsPDF } from 'jspdf'
 import { supabase } from '../supabase'
 import { useState, useEffect, useRef } from 'react'
@@ -35,6 +35,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     const [showTextStyleMenu, setShowTextStyleMenu] = useState(false)
     const [showListMenu, setShowListMenu] = useState(false)
     const [showColorMenu, setShowColorMenu] = useState(false)
+    const [lineSpacing, setLineSpacing] = useState('normal') // 'normal' | 'compact'
 
     // Toggle between Visual (Tiptap) and Source (HTML Textarea)
     const [isSourceMode, setIsSourceMode] = useState(false)
@@ -629,10 +630,10 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                             <Pilcrow className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Perusteksti' : 'Normal Text'}
                                         </button>
                                         <div className="h-px bg-slate-800 my-1"></div>
-                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleHeader(1)} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left font-bold w-full cursor-pointer transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
-                                            <Heading1 className="w-4 h-4 shrink-0" /> Heading 1
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleHeader(1)} className={`flex items-center gap-2 px-4 py-3 text-lg rounded-md text-left font-bold w-full cursor-pointer transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                            <Heading1 className="w-5 h-5 shrink-0" /> Heading 1
                                         </button>
-                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleHeader(2)} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left font-bold w-full cursor-pointer transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
+                                        <button onMouseDown={(e) => e.preventDefault()} onClick={() => toggleHeader(2)} className={`flex items-center gap-2 px-4 py-3 text-base rounded-md text-left font-bold w-full cursor-pointer transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
                                             <Heading2 className="w-4 h-4 shrink-0" /> Heading 2
                                         </button>
                                         <div className="h-px bg-slate-800 my-1"></div>
@@ -648,6 +649,30 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                         <button onMouseDown={(e) => e.preventDefault()} onClick={() => { editor.chain().focus().toggleStrike().run(); setShowTextStyleMenu(false) }} className={`flex items-center gap-2 px-4 py-3 text-sm rounded-md text-left w-full cursor-pointer transition-colors ${editor.isActive('strike') ? 'bg-indigo-500/20 text-indigo-400' : 'text-slate-300 hover:bg-slate-800'}`}>
                                             <Strikethrough className="w-4 h-4 shrink-0" /> {language === 'fi' ? 'Yliviivaus' : 'Strikethrough'}
                                         </button>
+                                        <div className="h-px bg-slate-800 my-1"></div>
+                                        <div className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                                            {language === 'fi' ? 'Rivinväli' : 'Line Spacing'}
+                                        </div>
+                                        <div className="flex gap-1 px-2 pb-2">
+                                            <button
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => { setLineSpacing('normal'); setShowTextStyleMenu(false) }}
+                                                className={`flex-1 flex items-center justify-center gap-2 px-2 py-2 text-sm rounded-md transition-colors ${lineSpacing === 'normal' ? 'bg-indigo-500/20 text-indigo-400 font-medium' : 'text-slate-300 hover:bg-slate-800'}`}
+                                                title={language === 'fi' ? 'Väljä (Oletus)' : 'Spacious (Default)'}
+                                            >
+                                                <Maximize2 className="w-4 h-4" />
+                                                <span className="text-xs">{language === 'fi' ? 'Väljä' : 'Normal'}</span>
+                                            </button>
+                                            <button
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => { setLineSpacing('compact'); setShowTextStyleMenu(false) }}
+                                                className={`flex-1 flex items-center justify-center gap-2 px-2 py-2 text-sm rounded-md transition-colors ${lineSpacing === 'compact' ? 'bg-indigo-500/20 text-indigo-400 font-medium' : 'text-slate-300 hover:bg-slate-800'}`}
+                                                title={language === 'fi' ? 'Tiivis' : 'Compact'}
+                                            >
+                                                <Minimize2 className="w-4 h-4" />
+                                                <span className="text-xs">{language === 'fi' ? 'Tiivis' : 'Compact'}</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
@@ -1012,7 +1037,9 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             />
                         </div>
                     ) : (
-                        <EditorContent editor={editor} />
+                        <div className={lineSpacing === 'compact' ? 'compact' : ''}>
+                            <EditorContent editor={editor} />
+                        </div>
                     )}
                 </div>
             </div >
