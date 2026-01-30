@@ -13,7 +13,7 @@ import TaskItem from '@tiptap/extension-task-item'
 import Underline from '@tiptap/extension-underline'
 import ImageResize from 'tiptap-extension-resize-image'
 import Youtube from '@tiptap/extension-youtube'
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon, Search, Replace, MoreHorizontal } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon, Search, Replace, MoreHorizontal, FileCode } from 'lucide-react'
 import { InputModal } from './dashboard/InputModal'
 import { FindReplaceModal } from './dashboard/FindReplaceModal'
 
@@ -612,11 +612,79 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         editor.view.dispatch(tr)
     }
 
+    // Helper to convert any CSS color to PDF compatible RGB/Hex
+    const getPdfColor = (colorString) => {
+        if (!colorString) return '#000000'
+
+        // Force conversion to sRGB using Canvas
+        try {
+            const canvas = document.createElement('canvas')
+            canvas.width = 1
+            canvas.height = 1
+            const ctx = canvas.getContext('2d')
+            ctx.fillStyle = colorString
+            ctx.fillRect(0, 0, 1, 1)
+            const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+            return `rgb(${r}, ${g}, ${b})`
+        } catch (e) {
+            console.warn("Color conversion failed:", colorString)
+            return '#000000'
+        }
+    }
+
     const handleExport = (type) => {
         if (!editor && !isSourceMode) return
 
         const dateStr = new Date().toISOString().split('T')[0]
         const filename = `${noteTitle.replace(/[^a-z0-9]/gi, '_')}_${dateStr}`
+
+        // Source Mode Export Logic
+        if (isSourceMode) {
+            if (type === 'pdf') {
+                const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                })
+                const margin = 20
+                const pageWidth = doc.internal.pageSize.getWidth()
+                const contentWidth = pageWidth - (margin * 2)
+                let cursorY = margin
+
+                doc.setFont("courier", "normal")
+                doc.setFontSize(10)
+                doc.setTextColor(0, 0, 0)
+
+                // Split long lines
+                const splitText = doc.splitTextToSize(noteContent, contentWidth)
+
+                let lineIndex = 0
+                const pageHeight = doc.internal.pageSize.getHeight()
+
+                while (lineIndex < splitText.length) {
+                    if (cursorY > pageHeight - margin) {
+                        doc.addPage()
+                        cursorY = margin
+                    }
+                    doc.text(splitText[lineIndex], margin, cursorY)
+                    cursorY += 5
+                    lineIndex++
+                }
+
+                doc.save(`${filename}_source.pdf`)
+                return
+            } else if (type === 'md' || type === 'html') {
+                const blob = new Blob([noteContent], { type: 'text/html' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = (`${filename}.html`)
+                a.click()
+                a.remove()
+                URL.revokeObjectURL(url)
+                return
+            }
+        }
 
         if (type === 'pdf') {
             const doc = new jsPDF({
@@ -689,7 +757,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             }
                         })
 
-                        doc.setTextColor(firstSpanColor)
+                        doc.setTextColor(getPdfColor(firstSpanColor))
                         const splitLines = doc.splitTextToSize(fullText, contentWidth)
 
                         // Check for page overflow within paragraph
@@ -1339,10 +1407,14 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             {showExportMenu && (
                                 <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[60]">
                                     <button onClick={() => handleExport('pdf')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                        <FileText className="w-4 h-4 text-rose-400" /> PDF Document
+                                        <FileText className="w-4 h-4 text-rose-400" /> {language === 'fi' ? "PDF" : "PDF Document"}
                                     </button>
-                                    <button onClick={() => handleExport('md')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                        <FileJson className="w-4 h-4 text-emerald-400" /> Markdown
+                                    <button onClick={() => handleExport(isSourceMode ? 'html' : 'md')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
+                                        <FileCode className="w-4 h-4 text-emerald-400" /> {
+                                            isSourceMode
+                                                ? (language === 'fi' ? "HTML" : "HTML Source (.html)")
+                                                : (language === 'fi' ? "Markdown" : "Markdown (.md)")
+                                        }
                                     </button>
                                 </div>
                             )}
