@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useStore } from '../store'
 import { TrashBin } from './TrashBin'
-import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code, Trash2, X, Square, CheckSquare, MoreHorizontal, LayoutDashboard, CaseUpper, Folder, Upload, Download, File, Loader2 } from 'lucide-react'
+import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code, Trash2, X, Square, CheckSquare, MoreHorizontal, LayoutDashboard, CaseUpper, Folder, Upload, Download, File, Loader2, Grid, Settings, LogOut, AlertTriangle, MoreVertical, FileJson } from 'lucide-react'
+import { jsPDF } from 'jspdf'
 
 export function Sidebar() {
     const {
@@ -21,6 +22,8 @@ export function Sidebar() {
     const [selectedItems, setSelectedItems] = useState(new Set()) // Set<"note:id" | "version:id">
     const [showTrash, setShowTrash] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showExportMenu, setShowExportMenu] = useState(false)
+    const exportMenuRef = useRef(null)
     const [fileToDelete, setFileToDelete] = useState(null)
     const [uploading, setUploading] = useState(false)
     const fileInputRef = useRef(null)
@@ -55,10 +58,24 @@ export function Sidebar() {
 
     const confirmDeleteFile = async () => {
         if (fileToDelete) {
-            await deleteFile(fileToDelete.path)
+            await deleteFile(fileToDelete)
             setFileToDelete(null)
+            setShowDeleteConfirm(false)
         }
     }
+
+    // Close export menu when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (exportMenuRef.current && !exportMenuRef.current.contains(event.target)) {
+                setShowExportMenu(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside)
+        }
+    }, [])
 
     const toggleSelection = (id, type, noteId = null) => {
         const key = `${type}:${id}`
@@ -373,35 +390,156 @@ export function Sidebar() {
                                 >
                                     <CheckSquare className="w-5 h-5" />
                                 </button>
-                                <button
-                                    onClick={() => setShowTrash(true)}
-                                    className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-rose-400 rounded-xl border border-slate-700 hover:border-slate-600 transition-colors"
-                                    title={language === 'fi' ? 'Roskakori' : 'Trash'}
-                                >
-                                    <Trash2 className="w-5 h-5" />
-                                </button>
                             </div>
                         ) : (
-                            <div className="flex items-center gap-2 mb-6 p-1 bg-slate-800/50 rounded-xl border border-slate-700/50">
-                                <button
-                                    onClick={() => {
-                                        setIsSelectionMode(false)
-                                        setSelectedItems(new Set())
-                                    }}
-                                    className="px-4 py-2 text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
-                                >
-                                    {language === 'fi' ? 'Peruuta' : 'Cancel'}
-                                </button>
-                                <div className="flex-1 text-center text-sm font-medium text-indigo-300">
-                                    {selectedItems.size} {language === 'fi' ? 'valittu' : 'selected'}
+                            <div className="flex flex-col gap-2 mb-6 p-2 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                                <div className="flex items-center justify-between gap-2">
+                                    <button
+                                        onClick={() => {
+                                            const allIds = new Set()
+                                            if (selectedItems.size !== notes.length) {
+                                                notes.forEach(n => {
+                                                    allIds.add(`note:${n.id}`)
+                                                    // Also add versions if loaded/available? Ideally yes, but softDeleteNotes handles parents.
+                                                    // For simple UI logic let's just select visible parent notes.
+                                                    // Actually user wants "Select All" functionality.
+                                                })
+                                            }
+                                            setSelectedItems(allIds)
+                                        }}
+                                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-700/50 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                                    >
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedItems.size === notes.length && notes.length > 0
+                                            ? 'bg-indigo-500 border-indigo-500'
+                                            : 'border-slate-600'
+                                            }`}>
+                                            {selectedItems.size === notes.length && notes.length > 0 && <CheckSquare className="w-3 h-3 text-white" />}
+                                        </div>
+                                        <span className="text-xs font-medium whitespace-nowrap">
+                                            {language === 'fi' ? 'Valitse kaikki' : 'Select All'}
+                                        </span>
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setIsSelectionMode(false)
+                                            setSelectedItems(new Set())
+                                        }}
+                                        className="p-1.5 text-slate-500 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => setShowDeleteConfirm(true)}
-                                    disabled={selectedItems.size === 0}
-                                    className="px-4 py-2 text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white rounded-lg shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                                >
-                                    {language === 'fi' ? 'Poista' : 'Delete'}
-                                </button>
+                                <div className="h-px bg-slate-700/50 w-full" />
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="text-xs font-medium text-slate-400 px-1">
+                                        {selectedItems.size} {language === 'fi' ? 'valittu' : 'selected'}
+                                    </div>
+                                    <div className="flex gap-1 items-center">
+                                        <div className="relative" ref={exportMenuRef}>
+                                            <button
+                                                onClick={() => setShowExportMenu(!showExportMenu)}
+                                                disabled={selectedItems.size === 0}
+                                                className="p-2 text-slate-400 hover:text-emerald-400 hover:bg-emerald-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                title={language === 'fi' ? 'Vie valitut' : 'Export selected'}
+                                            >
+                                                <Download className="w-4 h-4" />
+                                            </button>
+                                            {showExportMenu && (
+                                                <div className="absolute bottom-full right-0 mb-2 w-48 bg-slate-900 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-[100]">
+                                                    <button
+                                                        onClick={() => {
+                                                            const selectedNotes = notes.filter(n => selectedItems.has(`note:${n.id}`))
+                                                            if (selectedNotes.length === 0) return
+
+                                                            const doc = new jsPDF()
+                                                            const margin = 20
+                                                            const pageWidth = doc.internal.pageSize.getWidth()
+                                                            const contentWidth = pageWidth - (margin * 2)
+
+                                                            selectedNotes.forEach((note, index) => {
+                                                                if (index > 0) doc.addPage()
+
+                                                                let cursorY = margin
+
+                                                                // Title
+                                                                doc.setFontSize(22)
+                                                                doc.setFont("helvetica", "bold")
+                                                                const splitTitle = doc.splitTextToSize(note.title || 'Untitled', contentWidth)
+                                                                doc.text(splitTitle, margin, cursorY)
+                                                                cursorY += (splitTitle.length * 10) + 10
+
+                                                                // Date
+                                                                doc.setFontSize(10)
+                                                                doc.setFont("helvetica", "normal")
+                                                                doc.setTextColor(100)
+                                                                const dateStr = new Date(note.created_at).toLocaleDateString()
+                                                                doc.text(dateStr, margin, cursorY)
+                                                                cursorY += 10
+                                                                doc.setTextColor(0)
+
+                                                                // Simple HTML Strip for Content
+                                                                let plainText = note.content || ''
+                                                                plainText = plainText.replace(/<[^>]+>/g, '\n').replace(/\n\s*\n/g, '\n\n').trim()
+
+                                                                doc.setFontSize(12)
+                                                                const splitContent = doc.splitTextToSize(plainText, contentWidth)
+                                                                doc.text(splitContent, margin, cursorY)
+                                                            })
+
+                                                            doc.save(`potool-export-${new Date().toISOString().split('T')[0]}.pdf`)
+                                                            setShowExportMenu(false)
+                                                        }}
+                                                        className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                                    >
+                                                        <FileText className="w-4 h-4 text-rose-400" /> PDF Document
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            const selectedNotes = notes.filter(n => selectedItems.has(`note:${n.id}`))
+                                                            if (selectedNotes.length === 0) return
+
+                                                            const exportContent = selectedNotes.map(n => {
+                                                                // Simple conversion
+                                                                let mdContent = n.content || ''
+                                                                mdContent = mdContent.replace(/<h1>(.*?)<\/h1>/g, '# $1\n')
+                                                                mdContent = mdContent.replace(/<h2>(.*?)<\/h2>/g, '## $1\n')
+                                                                mdContent = mdContent.replace(/<h3>(.*?)<\/h3>/g, '### $1\n')
+                                                                mdContent = mdContent.replace(/<p>(.*?)<\/p>/g, '$1\n\n')
+                                                                // Retrieve text from other tags
+                                                                mdContent = mdContent.replace(/<[^>]+>/g, '')
+                                                                // Fix entities
+                                                                mdContent = mdContent.replace(/&nbsp;/g, ' ')
+
+                                                                return `# ${n.title}\n*${new Date(n.created_at).toLocaleDateString()}*\n\n${mdContent.trim()}`
+                                                            }).join('\n\n---\n\n')
+
+                                                            const blob = new Blob([exportContent], { type: 'text/markdown' })
+                                                            const url = URL.createObjectURL(blob)
+                                                            const a = document.createElement('a')
+                                                            a.href = url
+                                                            a.download = `potool-export-${new Date().toISOString().split('T')[0]}.md`
+                                                            a.click()
+                                                            URL.revokeObjectURL(url)
+                                                            setShowExportMenu(false)
+                                                        }}
+                                                        className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                                    >
+                                                        <FileJson className="w-4 h-4 text-emerald-400" /> Markdown
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="w-px h-4 bg-slate-700 my-auto mx-1" />
+                                        <button
+                                            onClick={() => setShowDeleteConfirm(true)}
+                                            disabled={selectedItems.size === 0}
+                                            className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-900/20 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title={language === 'fi' ? 'Siirrä roskakoriin' : 'Move to Trash'}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
 

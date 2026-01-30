@@ -456,11 +456,11 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
 
             doc.save(`${filename}.pdf`)
         } else if (type === 'md') {
-            const blob = new Blob([noteContent], { type: 'text/html' })
+            const blob = new Blob([noteContent], { type: 'text/markdown' })
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = (`${filename}.html`)
+            a.download = (`${filename}.md`)
             a.click()
             a.remove()
             URL.revokeObjectURL(url)
@@ -536,7 +536,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         ref={summaryButtonRef}
                         onClick={() => setShowSummaryPopover(!showSummaryPopover)}
                         className={`p-2 rounded-lg transition-colors ${showSummaryPopover ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-500 hover:text-indigo-300 hover:bg-slate-800'}`}
-                        title={language === 'fi' ? 'Suunnitelman tiedot & Tiivistelmä' : 'Plan Info & Summary'}
+                        title={language === 'fi' ? 'Tiivistelmä' : 'Summary'}
                     >
                         <ClipboardList className="w-5 h-5" />
                     </button>
@@ -889,7 +889,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                         <FileText className="w-4 h-4 text-rose-400" /> PDF Document
                                     </button>
                                     <button onClick={() => handleExport('md')} className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors">
-                                        <Code className="w-4 h-4 text-emerald-400" /> HTML Code
+                                        <FileJson className="w-4 h-4 text-emerald-400" /> Markdown
                                     </button>
                                 </div>
                             )}

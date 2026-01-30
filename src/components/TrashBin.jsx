@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useStore } from '../store'
-import { Trash2, RotateCcw, X, AlertTriangle } from 'lucide-react'
+import { Trash2, RotateCcw, X, AlertTriangle, CheckSquare } from 'lucide-react'
 
 export function TrashBin({ onClose }) {
     const { trashNotes, fetchTrash, loadingTrash, restoreNotes, permanentDeleteNotes, language } = useStore()
@@ -37,14 +38,42 @@ export function TrashBin({ onClose }) {
         setShowConfirm(false)
     }
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[80vh]">
                 <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-                        <Trash2 className="w-6 h-6 text-rose-500" />
-                        {language === 'fi' ? 'Roskakori' : 'Trash Bin'}
-                    </h2>
+                    <div className="flex items-center gap-6">
+                        <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+                            <Trash2 className="w-6 h-6 text-rose-500" />
+                            {language === 'fi' ? 'Roskakori' : 'Trash Bin'}
+                        </h2>
+                        {trashNotes.length > 0 && (
+                            <div className="flex items-center gap-2 pl-6 border-l border-slate-800">
+                                <div
+                                    onClick={() => {
+                                        if (selected.size === trashNotes.length) {
+                                            setSelected(new Set())
+                                        } else {
+                                            const newSet = new Set()
+                                            trashNotes.forEach(item => newSet.add(`${item.type}:${item.id}`))
+                                            setSelected(newSet)
+                                        }
+                                    }}
+                                    className="flex items-center gap-2 cursor-pointer group"
+                                >
+                                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${selected.size === trashNotes.length && trashNotes.length > 0
+                                        ? 'bg-indigo-500 border-indigo-500'
+                                        : 'border-slate-600 group-hover:border-slate-500'
+                                        }`}>
+                                        {selected.size === trashNotes.length && trashNotes.length > 0 && <CheckSquare className="w-3.5 h-3.5 text-white" />}
+                                    </div>
+                                    <span className="text-sm text-slate-400 group-hover:text-slate-300 font-medium">
+                                        {language === 'fi' ? 'Valitse kaikki' : 'Select All'}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                     <button onClick={onClose} className="p-2 hover:bg-slate-800 rounded-full transition-colors">
                         <X className="w-5 h-5 text-slate-400" />
                     </button>
@@ -108,11 +137,11 @@ export function TrashBin({ onClose }) {
                     )}
                 </div>
 
-                <div className="p-4 border-t border-slate-800 flex justify-between bg-slate-900/50">
-                    <div className="text-xs text-slate-500 flex items-center">
+                <div className="p-4 border-t border-slate-800 flex items-center justify-between gap-4 bg-slate-900/50">
+                    <div className="text-xs text-slate-500 font-medium">
                         {selected.size} {language === 'fi' ? 'valittu' : 'selected'}
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex gap-2 shrink-0">
                         <button
                             onClick={handleRestore}
                             disabled={selected.size === 0}
@@ -165,6 +194,7 @@ export function TrashBin({ onClose }) {
                     </div>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }
