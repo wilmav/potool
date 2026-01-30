@@ -876,7 +876,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                     <button
                         ref={summaryButtonRef}
                         onClick={() => setShowSummaryPopover(!showSummaryPopover)}
-                        className={`p-2 rounded-lg transition-colors ${showSummaryPopover ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-500 hover:text-indigo-300 hover:bg-slate-800'}`}
+                        className={`p-2 rounded-lg transition-all ${showSummaryPopover ? 'text-lime-400 bg-lime-500/10' : 'text-slate-500 hover:text-lime-400'}`}
                         title={language === 'fi' ? 'Tiivistelmä' : 'Summary'}
                     >
                         <ClipboardList className="w-5 h-5" />
@@ -942,7 +942,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             {/* Manual Timestamp Button */}
                             <button
                                 onClick={insertTimestamp}
-                                className="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2"
+                                className="p-2 text-slate-400 hover:text-cyan-400 transition-all flex items-center gap-2"
                                 title={language === 'fi' ? "Lisää aikaleima" : "Add Timestamp"}
                             >
                                 <div className="relative">
@@ -958,7 +958,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                 <button
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => setShowTextStyleMenu(!showTextStyleMenu)}
-                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-blue-400 transition-all"
                                     title={language === 'fi' ? "Tekstityylit" : "Text Styles"}
                                 >
                                     <Type className="w-5 h-5" />
@@ -1022,7 +1022,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                 <button
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => setShowListMenu(!showListMenu)}
-                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-orange-400 transition-all"
                                     title={language === 'fi' ? "Listat" : "Lists"}
                                 >
                                     <List className="w-5 h-5" />
@@ -1065,7 +1065,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             <div className="relative" ref={colorMenuRef}>
                                 <button
                                     onClick={() => setShowColorMenu(!showColorMenu)}
-                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
+                                    className="flex items-center gap-1 p-2 text-slate-400 hover:text-violet-400 transition-all"
                                     title={language === 'fi' ? "Tekstin väri" : "Text Color"}
                                 >
                                     <Palette className="w-5 h-5" />
@@ -1201,7 +1201,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                     <button
                                         onMouseDown={(e) => e.preventDefault()}
                                         onClick={() => setShowInsertMenu(!showInsertMenu)}
-                                        className={`p-2 rounded-lg transition-colors ${showInsertMenu ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
+                                        className={`p-2 rounded-lg transition-all ${showInsertMenu ? 'text-teal-400 bg-teal-500/10' : 'text-slate-400 hover:text-teal-400'}`}
                                         title={language === 'fi' ? "Lisää..." : "Insert..."}
                                     >
                                         <Plus className="w-5 h-5" />
@@ -1224,7 +1224,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                 <button
                                     onMouseDown={(e) => e.preventDefault()}
                                     onClick={() => setShowEditMenu(!showEditMenu)}
-                                    className={`p-2 rounded-lg transition-colors ${showEditMenu ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
+                                    className={`p-2 rounded-lg transition-all ${showEditMenu ? 'text-yellow-400 bg-yellow-500/10' : 'text-slate-400 hover:text-yellow-400'}`}
                                     title={language === 'fi' ? "Muokkaa..." : "Edit..."}
                                 >
                                     <MoreHorizontal className="w-5 h-5" />
@@ -1293,7 +1293,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                             <button
                                 onClick={() => setShowTranslateMenu(!showTranslateMenu)}
                                 disabled={isTranslating}
-                                className="p-2 text-slate-400 hover:text-indigo-300 hover:bg-slate-800 rounded-lg transition-all disabled:opacity-50"
+                                className="p-2 text-slate-400 hover:text-amber-400 transition-all disabled:opacity-50"
                                 title={language === 'fi' ? 'Käännä' : 'Translate'}
                             >
                                 {isTranslating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Languages className="w-5 h-5" />}
@@ -1318,7 +1318,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         <div className="relative" ref={historyMenuRef}>
                             <button
                                 onClick={() => setShowHistory(!showHistory)}
-                                className={`p-2 rounded-lg transition-colors ${showHistory ? 'text-indigo-400 bg-indigo-500/10' : 'text-slate-400 hover:text-indigo-400 hover:bg-slate-800'}`}
+                                className={`p-2 rounded-lg transition-all ${showHistory ? 'text-purple-400 bg-purple-500/10' : 'text-slate-400 hover:text-purple-400'}`}
                                 title={language === 'fi' ? 'Versiohistoria' : 'Version History'}
                             >
                                 <History className="w-5 h-5" />
@@ -1379,7 +1379,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                     <div className="flex items-center gap-1.5">
                         <button
                             onClick={() => createNote()}
-                            className="p-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg shadow-lg shadow-indigo-500/20 transition-all hover:scale-105 active:scale-95"
+                            className="p-2 text-indigo-400/80 border-2 border-indigo-400/40 hover:text-indigo-400 hover:border-indigo-400 rounded-lg transition-all"
                             title={language === 'fi' ? 'Uusi suunnitelma' : 'New Plan'}
                         >
                             <Plus className="w-5 h-5" />
@@ -1388,7 +1388,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         <button
                             onClick={() => saveNote(true)}
                             disabled={isSaving || !!duplicateWarning}
-                            className={`p-2 rounded-lg transition-all disabled:opacity-50 ${duplicateWarning ? 'text-slate-600 cursor-not-allowed' : 'text-emerald-500 hover:text-emerald-400 hover:bg-emerald-950/30'}`}
+                            className={`p-2 rounded-lg transition-all disabled:opacity-50 ${duplicateWarning ? 'text-slate-600 cursor-not-allowed' : 'text-emerald-500/80 hover:text-emerald-400'}`}
                             title={duplicateWarning ? duplicateWarning : (language === 'fi' ? "Tallenna" : "Save")}
                         >
                             {isManualSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
@@ -1399,7 +1399,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                         <div className="relative" ref={exportMenuRef}>
                             <button
                                 onClick={() => setShowExportMenu(!showExportMenu)}
-                                className="p-2 text-slate-500 hover:text-sky-400 hover:bg-slate-800 rounded-lg transition-all"
+                                className="p-2 text-slate-500 hover:text-sky-400 transition-all"
                                 title={language === 'fi' ? "Vie tiedostona" : "Export"}
                             >
                                 <Download className="w-5 h-5" />
@@ -1422,7 +1422,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
 
                         <button
                             onClick={onLogout}
-                            className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-950/30 rounded-lg transition-all"
+                            className="p-2 text-slate-500 hover:text-rose-500 transition-all"
                             title={language === 'fi' ? 'Kirjaudu ulos' : 'Log out'}
                         >
                             <LogOut className="w-5 h-5" />
