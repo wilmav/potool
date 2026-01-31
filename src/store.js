@@ -132,6 +132,8 @@ export const useStore = create(persist((set, get) => ({
         }
     }),
 
+    clearInsertedContent: () => set({ insertedContent: null }),
+
     // Cloud Actions
     versions: [], // List of versions for active note
     sidebarVersions: {}, // Cache for sidebar expansion: { [noteId]: version[] }

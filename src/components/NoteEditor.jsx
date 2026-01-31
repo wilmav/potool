@@ -205,11 +205,18 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
     }, [activeNoteId, editor, noteContent, versionTimestamp])
 
     // Effect for inserting content from Sidebar
-    const { insertionTrigger, insertedContent } = useStore()
+    const { insertionTrigger, insertedContent, clearInsertedContent } = useStore()
     useEffect(() => {
         if (!editor || !insertedContent) return
 
         const { text, type, color } = insertedContent
+
+        if (type === 'html') {
+            editor.chain().focus().insertContentAt(editor.state.doc.content.size, text).run()
+            clearInsertedContent()
+            return
+        }
+
         const inner = color ? `<span style="color: ${color}">${text}</span>` : text
         let contentToInsert = ''
 
@@ -220,6 +227,7 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
         }
 
         editor.chain().focus().insertContentAt(editor.state.doc.content.size, contentToInsert).run()
+        clearInsertedContent()
     }, [insertionTrigger])
 
     const [prevVersionTimestamp, setPrevVersionTimestamp] = useState(null)

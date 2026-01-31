@@ -4,6 +4,7 @@ import { useStore } from '../store'
 import { TrashBin } from './TrashBin'
 import { Search, ChevronDown, ChevronRight, Check, EyeOff, Plus, Eye, Info, FileText, Layout, FolderOpen, Code, Trash2, X, Square, CheckSquare, MoreHorizontal, LayoutDashboard, CaseUpper, Folder, Upload, Download, File, Loader2, Grid, Settings, LogOut, AlertTriangle, MoreVertical, FileJson } from 'lucide-react'
 import { jsPDF } from 'jspdf'
+import { TEMPLATES } from '../data/templates'
 
 export function Sidebar() {
     const {
@@ -219,7 +220,7 @@ export function Sidebar() {
     return (
         <div className="flex flex-col h-full">
             {/* View Switcher */}
-            <div className="p-4 pb-0 grid grid-cols-4 gap-2">
+            <div className="p-4 pb-0 grid grid-cols-5 gap-2">
                 <button
                     onClick={() => setView('plans')}
                     onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Suunnitelmat: Hallitse omia suunnitelmiasi' : 'Plans: Manage your own plans')}
@@ -231,6 +232,18 @@ export function Sidebar() {
                     title={language === 'fi' ? 'Suunnitelmat' : 'My Plans'}
                 >
                     <FileText className={`w-5 h-5 transition-colors ${view === 'plans' ? 'text-white' : 'text-cyan-400 group-hover/nav:text-cyan-300'}`} />
+                </button>
+                <button
+                    onClick={() => setView('templates')}
+                    onMouseEnter={(e) => handleTooltipEnter(e, language === 'fi' ? 'Mallipohjat: Valmiit rakenteet' : 'Templates: Predefined structures')}
+                    onMouseLeave={handleTooltipLeave}
+                    className={`flex items-center justify-center py-2.5 rounded-xl transition-all group/nav ${view === 'templates'
+                        ? 'bg-slate-700/50 text-white ring-1 ring-slate-600/50'
+                        : 'bg-slate-800/80 text-slate-300 hover:text-purple-200 hover:bg-purple-900/40 border border-slate-700/50'
+                        }`}
+                    title={language === 'fi' ? 'Mallipohjat' : 'Templates'}
+                >
+                    <Layout className={`w-5 h-5 transition-colors ${view === 'templates' ? 'text-white' : 'text-purple-400 group-hover/nav:text-purple-300'}`} />
                 </button>
                 <button
                     onClick={() => setView('library')}
@@ -370,6 +383,43 @@ export function Sidebar() {
                             )}
                         </div>
                     </>
+                )}
+
+                {view === 'templates' && (
+                    <div className="flex flex-col h-full overflow-y-auto custom-scrollbar pr-2 pb-4 space-y-3">
+                        <div className="relative shrink-0 mb-2">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder={language === 'fi' ? "Hae pohjia..." : "Search templates..."}
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2.5 bg-slate-800/50 border border-slate-700/50 rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 focus:outline-none text-sm text-slate-200 placeholder-slate-500 transition-all shadow-sm"
+                            />
+                        </div>
+
+                        {TEMPLATES.filter(t => {
+                            if (!searchTerm) return true
+                            const term = searchTerm.toLowerCase()
+                            return t.label[language].toLowerCase().includes(term) || t.description[language].toLowerCase().includes(term)
+                        }).map(template => (
+                            <div key={template.id} className="bg-slate-800/30 border border-slate-700/30 p-4 rounded-xl hover:bg-slate-800 hover:border-slate-600 transition-all group animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <h3 className="text-sm font-bold text-slate-200 mb-1 group-hover:text-purple-300 transition-colors">
+                                    {template.label[language] || template.label.en}
+                                </h3>
+                                <p className="text-xs text-slate-500 mb-4 leading-relaxed">
+                                    {template.description[language] || template.description.en}
+                                </p>
+                                <button
+                                    onClick={() => addToNote(template.content, 'html')}
+                                    className="w-full py-2 bg-slate-900/50 hover:bg-purple-600/20 text-slate-400 hover:text-purple-300 border border-slate-700/50 hover:border-purple-500/50 rounded-lg text-xs font-semibold transition-all flex items-center justify-center gap-2 shadow-sm"
+                                >
+                                    <Layout className="w-3.5 h-3.5" />
+                                    {language === 'fi' ? 'Käytä pohjaa' : 'Use Template'}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
                 )}
 
                 {view === 'plans' && (
