@@ -4,6 +4,7 @@ import { jsPDF } from 'jspdf'
 import { supabase } from '../supabase'
 import { useState, useEffect, useRef } from 'react'
 import { useEditor, EditorContent } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import { createPortal } from 'react-dom'
 import StarterKit from '@tiptap/starter-kit'
 import { Color } from '@tiptap/extension-color'
@@ -14,7 +15,7 @@ import Underline from '@tiptap/extension-underline'
 import ImageResize from 'tiptap-extension-resize-image'
 import Youtube from '@tiptap/extension-youtube'
 import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table'
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon, Search, Replace, MoreHorizontal, FileCode, Table as TableIcon } from 'lucide-react'
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon, Search, Replace, MoreHorizontal, FileCode, Table as TableIcon, Columns as ColumnsIcon, Rows as RowsIcon, Trash2, Split, Merge, CircleMinus } from 'lucide-react'
 import { InputModal } from './dashboard/InputModal'
 import { FindReplaceModal } from './dashboard/FindReplaceModal'
 
@@ -1484,6 +1485,62 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                 recentColors={recentColors}
                 onSaveColor={addRecentColor}
             />
+
+            {/* Table Bubble Menu */}
+            {editor && (
+                <BubbleMenu
+                    editor={editor}
+                    shouldShow={({ editor }) => {
+                        return editor.isActive('table')
+                    }}
+                    className="flex items-center gap-1 p-1.5 bg-slate-800 border border-slate-600/50 rounded-xl shadow-2xl overflow-hidden backdrop-blur-sm"
+                >
+                    <button
+                        onClick={() => editor.chain().focus().addColumnAfter().run()}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+                        title={language === 'fi' ? 'Lisää sarake' : 'Add Column'}
+                    >
+                        <ColumnsIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => editor.chain().focus().deleteColumn().run()}
+                        className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-900/10 rounded transition-colors"
+                        title={language === 'fi' ? 'Poista sarake' : 'Delete Column'}
+                    >
+                        <CircleMinus className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-slate-700 mx-1"></div>
+                    <button
+                        onClick={() => editor.chain().focus().addRowAfter().run()}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+                        title={language === 'fi' ? 'Lisää rivi' : 'Add Row'}
+                    >
+                        <RowsIcon className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => editor.chain().focus().deleteRow().run()}
+                        className="p-2 text-slate-400 hover:text-rose-400 hover:bg-rose-900/10 rounded transition-colors"
+                        title={language === 'fi' ? 'Poista rivi' : 'Delete Row'}
+                    >
+                        <CircleMinus className="w-4 h-4" />
+                    </button>
+                    <div className="w-px h-4 bg-slate-700 mx-1"></div>
+                    <button
+                        onClick={() => editor.chain().focus().mergeOrSplit().run()}
+                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+                        title={language === 'fi' ? 'Yhdistä/Jaa solut' : 'Merge/Split Cells'}
+                    >
+                        <Merge className="w-4 h-4" />
+                    </button>
+                    <button
+                        onClick={() => editor.chain().focus().deleteTable().run()}
+                        className="p-2 text-rose-500 hover:text-rose-300 hover:bg-rose-900/30 rounded transition-colors"
+                        title={language === 'fi' ? 'Poista taulukko' : 'Delete Table'}
+                    >
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </BubbleMenu>
+            )}
         </div >
     )
 }

@@ -20,6 +20,7 @@
   "dependencies": {
     "@floating-ui/dom": "^1.7.4",
     "@supabase/supabase-js": "^2.91.0",
+    "@tiptap/extension-bubble-menu": "^3.18.0",
     "@tiptap/extension-color": "^3.16.0",
     "@tiptap/extension-image": "^3.17.0",
     "@tiptap/extension-table": "^3.18.0",
