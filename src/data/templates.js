@@ -11,42 +11,7 @@ export const TEMPLATES = [
             <h2>Keskeiset käyttäjäsegmentit</h2>
             <p></p>
             <h2>Roadmap (kvartaaleittain)</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 100px"><p>Kvartaali</p></th>
-                        <th><p>Päätavoite</p></th>
-                        <th><p>Keskeiset toimenpiteet</p></th>
-                        <th><p>Mittarit</p></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><p>Q1</p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                    <tr>
-                        <td><p>Q2</p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                    <tr>
-                        <td><p>Q3</p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                    <tr>
-                        <td><p>Q4</p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                </tbody>
-            </table>
+            <table><tbody><tr><th style="width: 100px"><p>Kvartaali</p></th><th style="width: 200px"><p>Päätavoite</p></th><th style="width: 300px"><p>Keskeiset toimenpiteet</p></th><th style="width: 150px"><p>Mittarit</p></th></tr><tr><td><p>Q1</p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr><tr><td><p>Q2</p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr><tr><td><p>Q3</p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr><tr><td><p>Q4</p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr></tbody></table>
             <p></p>
             <h2>Riskit ja riippuvuudet</h2>
             <p></p>
@@ -68,37 +33,7 @@ export const TEMPLATES = [
             <h2>Priorisointiperiaatteet</h2>
             <p></p>
             <h2>Backlog-kategoriat</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 20%"><p>Kategoria</p></th>
-                        <th style="width: 40%"><p>Kuvaus</p></th>
-                        <th style="width: 40%"><p>Esimerkkejä</p></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><p>Core features</p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                    <tr>
-                        <td><p>Enhancements</p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                    <tr>
-                        <td><p>Technical debt</p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                    <tr>
-                        <td><p>Research / spikes</p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                </tbody>
-            </table>
+            <table><tbody><tr><th style="width: 150px"><p>Kategoria</p></th><th style="width: 300px"><p>Kuvaus</p></th><th style="width: 300px"><p>Esimerkkejä</p></th></tr><tr><td><p>Core features</p></td><td><p></p></td><td><p></p></td></tr><tr><td><p>Enhancements</p></td><td><p></p></td><td><p></p></td></tr><tr><td><p>Technical debt</p></td><td><p></p></td><td><p></p></td></tr><tr><td><p>Research / spikes</p></td><td><p></p></td><td><p></p></td></tr></tbody></table>
             <p></p>
             <h2>Sprinttikohtaiset tavoitteet</h2>
             <p></p>
@@ -118,24 +53,7 @@ export const TEMPLATES = [
             <h2>Haluttu liiketoimintamuutos</h2>
             <p></p>
             <h2>Nykytila vs tavoitetila</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 25%"><p>Teema</p></th>
-                        <th style="width: 25%"><p>Nykytila</p></th>
-                        <th style="width: 25%"><p>Tavoitetila</p></th>
-                        <th style="width: 25%"><p>Mittari</p></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                </tbody>
-            </table>
+            <table><tbody><tr><th style="width: 200px"><p>Teema</p></th><th style="width: 200px"><p>Nykytila</p></th><th style="width: 200px"><p>Tavoitetila</p></th><th style="width: 200px"><p>Mittari</p></th></tr><tr><td><p></p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr></tbody></table>
             <p></p>
             <h2>Keskeiset hypoteesit</h2>
             <p></p>
@@ -155,26 +73,7 @@ export const TEMPLATES = [
             <h2>Tekniset tavoitteet</h2>
             <p></p>
             <h2>Integraatiot ja rajapinnat</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 20%"><p>Järjestelmä</p></th>
-                        <th style="width: 20%"><p>Rajapinta</p></th>
-                        <th style="width: 15%"><p>Suunta</p></th>
-                        <th style="width: 25%"><p>Tiedot</p></th>
-                        <th style="width: 20%"><p>Riskit</p></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                </tbody>
-            </table>
+            <table><tbody><tr><th style="width: 150px"><p>Järjestelmä</p></th><th style="width: 150px"><p>Rajapinta</p></th><th style="width: 100px"><p>Suunta</p></th><th style="width: 200px"><p>Tiedot</p></th><th style="width: 150px"><p>Riskit</p></th></tr><tr><td><p></p></td><td><p></p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr></tbody></table>
             <p></p>
             <h2>Tietomalli / datavirrat</h2>
             <p></p>
@@ -196,24 +95,7 @@ export const TEMPLATES = [
             <h2>Tarpeet ja odotukset</h2>
             <p></p>
             <h2>Sidosryhmät</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 25%"><p>Sidosryhmä</p></th>
-                        <th style="width: 30%"><p>Tarve</p></th>
-                        <th style="width: 25%"><p>Vaikutus</p></th>
-                        <th style="width: 20%"><p>Kommunikaatiotapa</p></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                        <td><p></p></td>
-                    </tr>
-                </tbody>
-            </table>
+            <table><tbody><tr><th style="width: 200px"><p>Sidosryhmä</p></th><th style="width: 250px"><p>Tarve</p></th><th style="width: 200px"><p>Vaikutus</p></th><th style="width: 150px"><p>Kommunikaatiotapa</p></th></tr><tr><td><p></p></td><td><p></p></td><td><p></p></td><td><p></p></td></tr></tbody></table>
             <p></p>
             <h2>Kommunikaatiorytmi</h2>
             <p></p>
