@@ -13,7 +13,8 @@ import TaskItem from '@tiptap/extension-task-item'
 import Underline from '@tiptap/extension-underline'
 import ImageResize from 'tiptap-extension-resize-image'
 import Youtube from '@tiptap/extension-youtube'
-import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon, Search, Replace, MoreHorizontal, FileCode } from 'lucide-react'
+import { Table, TableCell, TableHeader, TableRow } from '@tiptap/extension-table'
+import { Bold, Italic, Underline as UnderlineIcon, Strikethrough, Type, Check, Stamp, ClipboardList, Image as ImageIcon, Youtube as YoutubeIcon, Search, Replace, MoreHorizontal, FileCode, Table as TableIcon } from 'lucide-react'
 import { InputModal } from './dashboard/InputModal'
 import { FindReplaceModal } from './dashboard/FindReplaceModal'
 
@@ -146,6 +147,12 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
             Youtube.configure({
                 controls: false,
             }),
+            Table.configure({
+                resizable: true,
+            }),
+            TableRow,
+            TableHeader,
+            TableCell,
             // Underline is apparently included or duplicated
         ],
         content: noteContent, // Initial content
@@ -1252,6 +1259,13 @@ export function NoteEditor({ onLogout, isSidebarOpen, onOpenSidebar }) {
                                                 <div className="h-px bg-slate-800 my-1"></div>
                                             </>
                                         )}
+                                        <button
+                                            onMouseDown={(e) => e.preventDefault()}
+                                            onClick={() => { editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(); setShowEditMenu(false) }}
+                                            className="flex items-center gap-3 w-full px-4 py-3 text-sm text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                                        >
+                                            <TableIcon className="w-4 h-4 text-emerald-400" /> {language === 'fi' ? "Lisää taulukko" : "Insert Table"}
+                                        </button>
                                         <button
                                             onMouseDown={(e) => e.preventDefault()}
                                             onClick={() => {

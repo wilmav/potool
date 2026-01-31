@@ -148,7 +148,28 @@ export const useStore = create(persist((set, get) => ({
             .is('deleted_at', null) // Filter not deleted
             .order('updated_at', { ascending: false })
 
-        if (data) set({ notes: data })
+        if (data) {
+            const currentState = get()
+            const currentActiveId = currentState.activeNoteId
+            // Check if currently active note is still valid (exists in the fetched list)
+            const activeNoteStillExists = currentActiveId && data.some(n => n.id === currentActiveId)
+
+            if ((!currentActiveId || !activeNoteStillExists) && data.length > 0) {
+                // Open latest if no active note OR active note is no longer in the list
+                const latest = data[0]
+                set({
+                    notes: data,
+                    activeNoteId: latest.id,
+                    noteTitle: latest.title,
+                    noteContent: latest.content || '',
+                    noteSummary: latest.summary || '',
+                    versions: [] // Reset versions until fetched
+                })
+                get().fetchVersions(latest.id)
+            } else {
+                set({ notes: data })
+            }
+        }
     },
 
     createNote: async () => {
